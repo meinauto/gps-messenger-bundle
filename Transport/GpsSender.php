@@ -41,11 +41,9 @@ final class GpsSender implements SenderInterface
         $encodedMessage = $this->serializer->encode($envelope);
 
         $messageBuilder = new MessageBuilder();
-        try {
-            $messageBuilder = $messageBuilder->setData(json_encode($encodedMessage, JSON_THROW_ON_ERROR));
-        } catch (\JsonException $exception) {
-            throw new TransportException($exception->getMessage(), 0, $exception);
-        }
+        $messageBuilder = $messageBuilder
+            ->setData($encodedMessage['body'])
+            ->setAttributes($encodedMessage['headers'] ?? []);
 
         $redeliveryStamp = $envelope->last(RedeliveryStamp::class);
         if ($redeliveryStamp instanceof RedeliveryStamp) {
@@ -60,7 +58,9 @@ final class GpsSender implements SenderInterface
 
         $attributesStamp = $envelope->last(AttributesStamp::class);
         if ($attributesStamp instanceof AttributesStamp) {
-            $messageBuilder = $messageBuilder->setAttributes($attributesStamp->getAttributes());
+            foreach ($attributesStamp->getAttributes() as $key => $value) {
+                $messageBuilder = $messageBuilder->addAttribute($key, $value);
+            }
         }
 
         $this->pubSubClient
