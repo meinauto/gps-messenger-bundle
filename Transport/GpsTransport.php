@@ -20,7 +20,7 @@ final class GpsTransport implements TransportInterface, SetupableTransportInterf
     private GpsConfigurationInterface $gpsConfiguration;
     private SerializerInterface $serializer;
     private GpsReceiver $receiver;
-    private GpsSender $sender;
+    private GpsBatchSender $sender;
     private LoggerInterface $logger;
 
     public function __construct(
@@ -85,14 +85,14 @@ final class GpsTransport implements TransportInterface, SetupableTransportInterf
         return $this->receiver;
     }
 
-    public function getSender(): GpsSender
+    public function getSender(): GpsBatchSender
     {
         /** @psalm-suppress RedundantPropertyInitializationCheck */
         if (isset($this->sender)) {
             return $this->sender;
         }
 
-        $this->sender = new GpsSender($this->pubSubClient, $this->gpsConfiguration, $this->serializer);
+        $this->sender = new GpsBatchSender($this->pubSubClient, $this->gpsConfiguration, $this->serializer);
 
         return $this->sender;
     }
