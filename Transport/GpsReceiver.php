@@ -98,6 +98,20 @@ final class GpsReceiver implements ReceiverInterface
         $this->ack($envelope);
     }
 
+    public function extendMessageTtl(Envelope $envelope, int $ttl): void
+    {
+        try {
+            $gpsReceivedStamp = $this->getGpsReceivedStamp($envelope);
+
+            $this->pubSubClient
+                ->subscription($this->gpsConfiguration->getSubscriptionName())
+                ->modifyAckDeadline($gpsReceivedStamp->getGpsMessage(), $ttl)
+            ;
+        } catch (Throwable $exception) {
+            throw new TransportException($exception->getMessage(), 0, $exception);
+        }
+    }
+
     private function getGpsReceivedStamp(Envelope $envelope): GpsReceivedStamp
     {
         $gpsReceivedStamp = $envelope->last(GpsReceivedStamp::class);
