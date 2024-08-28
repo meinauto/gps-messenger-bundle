@@ -6,9 +6,9 @@ namespace PetitPress\GpsMessengerBundle\Transport;
 
 use Google\Cloud\PubSub\Message;
 use Google\Cloud\PubSub\PubSubClient;
-use JsonException;
 use LogicException;
 use PetitPress\GpsMessengerBundle\Transport\Stamp\GpsReceivedStamp;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Exception\MessageDecodingFailedException;
 use Symfony\Component\Messenger\Exception\TransportException;
@@ -22,17 +22,23 @@ use Throwable;
 final class GpsReceiver implements ReceiverInterface
 {
     private PubSubClient $pubSubClient;
+
     private GpsConfigurationInterface $gpsConfiguration;
+
     private SerializerInterface $serializer;
+
+    private LoggerInterface $logger;
 
     public function __construct(
         PubSubClient $pubSubClient,
         GpsConfigurationInterface $gpsConfiguration,
-        SerializerInterface $serializer
+        SerializerInterface $serializer,
+        LoggerInterface $logger
     ) {
         $this->pubSubClient = $pubSubClient;
         $this->gpsConfiguration = $gpsConfiguration;
         $this->serializer = $serializer;
+        $this->logger = $logger;
     }
 
     /**
@@ -48,7 +54,15 @@ final class GpsReceiver implements ReceiverInterface
                 ->pull($this->gpsConfiguration->getSubscriptionPullOptions());
 
             foreach ($messages as $message) {
-                yield $this->createEnvelopeFromPubSubMessage($message);
+                try {
+                    yield $this->createEnvelopeFromPubSubMessage($message);
+                } catch (MessageDecodingFailedException $exception) {
+                    $this->logger->warning($exception->getMessage(), ['exception' => $exception]);
+
+                    $this->pubSubClient
+                        ->subscription($this->gpsConfiguration->getSubscriptionName())
+                        ->acknowledge($message);
+                }
             }
         } catch (Throwable $exception) {
             throw new TransportException($exception->getMessage(), 0, $exception);
@@ -65,8 +79,7 @@ final class GpsReceiver implements ReceiverInterface
 
             $this->pubSubClient
                 ->subscription($this->gpsConfiguration->getSubscriptionName())
-                ->acknowledge($gpsReceivedStamp->getGpsMessage())
-            ;
+                ->acknowledge($gpsReceivedStamp->getGpsMessage());
         } catch (Throwable $exception) {
             throw new TransportException($exception->getMessage(), 0, $exception);
         }
@@ -82,16 +95,7 @@ final class GpsReceiver implements ReceiverInterface
      */
     public function reject(Envelope $envelope): void
     {
-        try {
-            $gpsReceivedStamp = $this->getGpsReceivedStamp($envelope);
-
-            $this->pubSubClient
-                ->subscription($this->gpsConfiguration->getSubscriptionName())
-                ->modifyAckDeadline($gpsReceivedStamp->getGpsMessage(), 0)
-            ;
-        } catch (Throwable $exception) {
-            throw new TransportException($exception->getMessage(), 0, $exception);
-        }
+        $this->ack($envelope);
     }
 
     private function getGpsReceivedStamp(Envelope $envelope): GpsReceivedStamp

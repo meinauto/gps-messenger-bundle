@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace PetitPress\GpsMessengerBundle\Transport;
 
 use Google\Cloud\PubSub\PubSubClient;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Transport\Serialization\SerializerInterface;
 use Symfony\Component\Messenger\Transport\SetupableTransportInterface;
@@ -20,15 +21,19 @@ final class GpsTransport implements TransportInterface, SetupableTransportInterf
     private SerializerInterface $serializer;
     private GpsReceiver $receiver;
     private GpsSender $sender;
+    private LoggerInterface $logger;
 
     public function __construct(
         PubSubClient $pubSubClient,
         GpsConfigurationInterface $gpsConfiguration,
-        SerializerInterface $serializer
+        SerializerInterface $serializer,
+        LoggerInterface $logger,
+
     ) {
         $this->pubSubClient = $pubSubClient;
         $this->gpsConfiguration = $gpsConfiguration;
         $this->serializer = $serializer;
+        $this->logger = $logger;
     }
 
     /**
@@ -70,7 +75,12 @@ final class GpsTransport implements TransportInterface, SetupableTransportInterf
             return $this->receiver;
         }
 
-        $this->receiver = new GpsReceiver($this->pubSubClient, $this->gpsConfiguration, $this->serializer);
+        $this->receiver = new GpsReceiver(
+            $this->pubSubClient,
+            $this->gpsConfiguration,
+            $this->serializer,
+            $this->logger
+        );
 
         return $this->receiver;
     }
