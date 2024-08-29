@@ -21,8 +21,8 @@ final class GpsBatchSender implements SenderInterface
     private SerializerInterface $serializer;
     private ?BatchPublisher $batchPublisher = null;
     private array $batchOptions = [
-        'batchSize' => 100, // Max messages for each batch.
-        'callPeriod' => 0.01, // Max time in seconds between each batch publish.
+        'batchSize' => 100,  // Max messages for each batch.
+        'callPeriod' => 0.1, // Max time in seconds between each batch publish.
     ];
 
     public function __construct(
