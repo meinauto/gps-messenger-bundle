@@ -40,6 +40,22 @@ final class GpsConfigurationTest extends TestCase
                 'expectedConfiguration' => new GpsConfiguration(
                     GpsConfigurationResolverInterface::DEFAULT_TOPIC_NAME,
                     GpsConfigurationResolverInterface::DEFAULT_TOPIC_NAME,
+                    false,
+                    [],
+                    [],
+                    [],
+                    ['maxMessages' => GpsConfigurationResolverInterface::DEFAULT_MAX_MESSAGES_PULL, 'returnImmediately' => false]
+                ),
+            ],
+            'Compression enabled' => [
+                'dsn' => 'gps://default',
+                'options' => [
+                    'compress_message_body' => true,
+                ],
+                'expectedConfiguration' => new GpsConfiguration(
+                    GpsConfigurationResolverInterface::DEFAULT_TOPIC_NAME,
+                    GpsConfigurationResolverInterface::DEFAULT_TOPIC_NAME,
+                    true,
                     [],
                     [],
                     [],
@@ -52,6 +68,7 @@ final class GpsConfigurationTest extends TestCase
                 'expectedConfiguration' => new GpsConfiguration(
                     'something',
                     'something',
+                    false,
                     [],
                     [],
                     [],
@@ -64,6 +81,7 @@ final class GpsConfigurationTest extends TestCase
                 'expectedConfiguration' => new GpsConfiguration(
                     'topic_name',
                     'subscription_name',
+                    false,
                     [],
                     [],
                     [],
@@ -76,6 +94,7 @@ final class GpsConfigurationTest extends TestCase
                 'expectedConfiguration' => new GpsConfiguration(
                     'topic_name',
                     'subscription_name',
+                    false,
                     ['apiEndpoint' => 'https://europe-west3-pubsub.googleapis.com'],
                     ['labels' => ['label_topic1']],
                     ['labels' => ['label_subscription1'], 'enableMessageOrdering' => true, 'ackDeadlineSeconds' => 100],
@@ -90,6 +109,7 @@ final class GpsConfigurationTest extends TestCase
                 'expectedConfiguration' => new GpsConfiguration(
                     'something',
                     'something',
+                    false,
                     [],
                     [],
                     [],
@@ -105,6 +125,7 @@ final class GpsConfigurationTest extends TestCase
                 'expectedConfiguration' => new GpsConfiguration(
                     'topic_name',
                     'subscription_name',
+                    false,
                     [],
                     [],
                     [],
@@ -136,6 +157,7 @@ final class GpsConfigurationTest extends TestCase
                 'expectedConfiguration' => new GpsConfiguration(
                     'topic_name1',
                     'subscription_name',
+                    false,
                     ['apiEndpoint' => 'https://europe-west3-pubsub.googleapis.com'],
                     ['labels' => ['label_topic1']],
                     ['labels' => ['label_subscription1'], 'enableMessageOrdering' => true, 'ackDeadlineSeconds' => 100],
@@ -148,6 +170,7 @@ final class GpsConfigurationTest extends TestCase
                 'expectedConfiguration' => new GpsConfiguration(
                     GpsConfigurationResolverInterface::DEFAULT_TOPIC_NAME,
                     GpsConfigurationResolverInterface::DEFAULT_TOPIC_NAME,
+                    false,
                     [],
                     [],
                     [],
@@ -160,6 +183,7 @@ final class GpsConfigurationTest extends TestCase
                 'expectedConfiguration' => new GpsConfiguration(
                     GpsConfigurationResolverInterface::DEFAULT_TOPIC_NAME,
                     GpsConfigurationResolverInterface::DEFAULT_TOPIC_NAME,
+                    false,
                     [],
                     [],
                     [],
@@ -179,6 +203,7 @@ final class GpsConfigurationTest extends TestCase
                 'expectedConfiguration' => new GpsConfiguration(
                     GpsConfigurationResolverInterface::DEFAULT_TOPIC_NAME,
                     GpsConfigurationResolverInterface::DEFAULT_TOPIC_NAME,
+                    false,
                     [],
                     [],
                     [],
@@ -198,6 +223,7 @@ final class GpsConfigurationTest extends TestCase
                 'expectedConfiguration' => new GpsConfiguration(
                     GpsConfigurationResolverInterface::DEFAULT_TOPIC_NAME,
                     GpsConfigurationResolverInterface::DEFAULT_TOPIC_NAME,
+                    false,
                     [],
                     [],
                     [],

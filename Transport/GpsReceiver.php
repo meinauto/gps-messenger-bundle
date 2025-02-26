@@ -128,9 +128,19 @@ final class GpsReceiver implements ReceiverInterface
      */
     private function createEnvelopeFromPubSubMessage(Message $message): Envelope
     {
+        $headers = $message->attributes();
+
+        $body = $message->data();
+        if (isset($headers['compressed-message-body']) && $headers['compressed-message-body'] === "true") {
+            $body = \gzdecode($body);
+            if (false === $body) {
+                throw new MessageDecodingFailedException('Failed to decode compressed message body.');
+            }
+        }
+
         $envelope = $this->serializer->decode([
-            'body' => $message->data(),
-            'headers' => $message->attributes(),
+            'body' => $body,
+            'headers' => $headers,
         ]);
 
         return $envelope->with(new GpsReceivedStamp($message));

@@ -17,6 +17,8 @@ interface GpsConfigurationInterface
 
     public function getSubscriptionName(): string;
 
+    public function compressMessageBody(): bool;
+
     /**
      * @see PubSubClient constructor options
      */

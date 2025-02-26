@@ -10,6 +10,7 @@ use Google\Cloud\PubSub\PubSubClient;
 use PetitPress\GpsMessengerBundle\Transport\Stamp\AttributesStamp;
 use PetitPress\GpsMessengerBundle\Transport\Stamp\OrderingKeyStamp;
 use Symfony\Component\Messenger\Envelope;
+use Symfony\Component\Messenger\Exception\TransportException;
 use Symfony\Component\Messenger\Stamp\RedeliveryStamp;
 use Symfony\Component\Messenger\Transport\Sender\SenderInterface;
 use Symfony\Component\Messenger\Transport\Serialization\SerializerInterface;
@@ -38,6 +39,19 @@ final class GpsBatchSender implements SenderInterface
     public function send(Envelope $envelope): Envelope
     {
         $encodedMessage = $this->serializer->encode($envelope);
+
+        if ($this->gpsConfiguration->compressMessageBody()) {
+            $encodedMessage['body'] = \gzencode($encodedMessage['body']);
+            if (false === $encodedMessage['body']) {
+                throw new TransportException('Failed to compress message body.');
+            }
+
+            if (!isset($encodedMessage['headers'])) {
+                $encodedMessage['headers'] = [];
+            }
+
+            $encodedMessage['headers']['compressed-message-body'] = "true";
+        }
 
         $messageBuilder = new MessageBuilder();
         $messageBuilder = $messageBuilder

@@ -40,6 +40,19 @@ final class GpsSender implements SenderInterface
     {
         $encodedMessage = $this->serializer->encode($envelope);
 
+        if ($this->gpsConfiguration->compressMessageBody()) {
+            $encodedMessage['body'] = \gzencode($encodedMessage['body']);
+            if (false === $encodedMessage['body']) {
+                throw new TransportException('Failed to compress message body.');
+            }
+
+            if (!isset($encodedMessage['headers'])) {
+                $encodedMessage['headers'] = [];
+            }
+
+            $encodedMessage['headers']['compressed-message-body'] = "true";
+        }
+
         $messageBuilder = new MessageBuilder();
         $messageBuilder = $messageBuilder
             ->setData($encodedMessage['body'])
