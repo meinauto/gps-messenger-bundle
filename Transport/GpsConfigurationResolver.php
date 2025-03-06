@@ -158,6 +158,8 @@ final class GpsConfigurationResolver implements GpsConfigurationResolverInterfac
                     ;
                 }
             )
+            ->setDefault('compress_message_body', false)
+            ->setAllowedTypes('compress_message_body', 'bool')
             ->setAllowedTypes('client_config', 'array')
         ;
 
@@ -166,6 +168,7 @@ final class GpsConfigurationResolver implements GpsConfigurationResolverInterfac
         return new GpsConfiguration(
             $resolvedOptions['topic']['name'],
             $resolvedOptions['subscription']['name'],
+            $resolvedOptions['compress_message_body'],
             $resolvedOptions['client_config'],
             $resolvedOptions['topic']['options'],
             $resolvedOptions['subscription']['options'],

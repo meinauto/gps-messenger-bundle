@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PetitPress\GpsMessengerBundle\Transport;
 
+use Google\Cloud\PubSub\BatchPublisher;
 use Google\Cloud\PubSub\MessageBuilder;
 use Google\Cloud\PubSub\PubSubClient;
 use PetitPress\GpsMessengerBundle\Transport\Stamp\AttributesStamp;
@@ -14,14 +15,16 @@ use Symfony\Component\Messenger\Stamp\RedeliveryStamp;
 use Symfony\Component\Messenger\Transport\Sender\SenderInterface;
 use Symfony\Component\Messenger\Transport\Serialization\SerializerInterface;
 
-/**
- * @author Ronald Marfoldi <ronald.marfoldi@petitpress.sk>
- */
-final class GpsSender implements SenderInterface
+final class GpsBatchSender implements SenderInterface
 {
     private PubSubClient $pubSubClient;
     private GpsConfigurationInterface $gpsConfiguration;
     private SerializerInterface $serializer;
+    private ?BatchPublisher $batchPublisher = null;
+    private array $batchOptions = [
+        'batchSize' => 100,  // Max messages for each batch.
+        'callPeriod' => 0.1, // Max time in seconds between each batch publish.
+    ];
 
     public function __construct(
         PubSubClient $pubSubClient,
@@ -33,9 +36,6 @@ final class GpsSender implements SenderInterface
         $this->serializer = $serializer;
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function send(Envelope $envelope): Envelope
     {
         $encodedMessage = $this->serializer->encode($envelope);
@@ -76,11 +76,20 @@ final class GpsSender implements SenderInterface
             }
         }
 
-        $this->pubSubClient
-            ->topic($this->gpsConfiguration->getTopicName())
-            ->publish($messageBuilder->build())
-        ;
+        $this->getBatchPublisher()
+            ->publish($messageBuilder->build());
 
         return $envelope;
+    }
+
+    private function getBatchPublisher(): BatchPublisher
+    {
+        if (null === $this->batchPublisher) {
+            $this->batchPublisher = $this->pubSubClient
+                ->topic($this->gpsConfiguration->getTopicName())
+                ->batchPublisher($this->batchOptions);
+        }
+
+        return $this->batchPublisher;
     }
 }

@@ -17,8 +17,8 @@ final class Configuration implements ConfigurationInterface
         $rootNode
             ->children()
                 ->scalarNode('auth_cache')
-                    ->cannotBeEmpty()
-                    ->defaultValue('cache.app')
+//                    ->cannotBeEmpty()
+//                    ->defaultValue('cache.app')
                     ->info('A cache for storing access tokens.')
                 ->end()
             ->end();

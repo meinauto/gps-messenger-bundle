@@ -23,8 +23,6 @@ use Symfony\Component\Messenger\Transport\Serialization\SerializerInterface;
 
 class GpsTransportTest extends TestCase
 {
-    /**
-     */
     private GpsTransport $subject;
 
     /**
@@ -47,11 +45,13 @@ class GpsTransportTest extends TestCase
         $this->pubSubClient = $this->createMock(PubSubClient::class);
         $this->gpsConfiguration = $this->createMock(GpsConfigurationInterface::class);
         $this->serializerMock = $this->createMock(SerializerInterface::class);
+        $this->loggerMock = $this->createMock(\Psr\Log\LoggerInterface::class);
 
         $this->subject = new GpsTransport(
             $this->pubSubClient,
             $this->gpsConfiguration,
-            $this->serializerMock
+            $this->serializerMock,
+            $this->loggerMock
         );
     }
 
@@ -65,7 +65,7 @@ class GpsTransportTest extends TestCase
         $this->expectException(TransportException::class);
         $this->expectExceptionMessage('No GpsReceivedStamp found on the Envelope.');
 
-        $this->subject->ack(new Envelope(new stdClass()));
+        $this->subject->ack(new Envelope(new stdClass));
     }
 
     public function testReject(): void
@@ -73,7 +73,7 @@ class GpsTransportTest extends TestCase
         $this->expectException(TransportException::class);
         $this->expectExceptionMessage('No GpsReceivedStamp found on the Envelope.');
 
-        $this->subject->reject(new Envelope(new stdClass()));
+        $this->subject->reject(new Envelope(new stdClass));
     }
 
     public function testSend(): void
@@ -90,7 +90,7 @@ class GpsTransportTest extends TestCase
             )
         );
 
-        $message = new stdClass();
+        $message = new stdClass;
         $message->prop = 'test';
 
         $envelope = new Envelope($message, [$transportConfiguration]);
