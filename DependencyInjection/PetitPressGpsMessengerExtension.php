@@ -24,7 +24,7 @@ final class PetitPressGpsMessengerExtension extends Extension
         $configuration = new Configuration();
         $config = $this->processConfiguration($configuration, $configs);
 
-        if ($config['auth_cache']) {
+        if (isset($config['auth_cache'])) {
             $gpsTransportFactoryDefinition = $container->getDefinition(GpsTransportFactory::class);
             $gpsTransportFactoryDefinition->replaceArgument(1, new Reference($config['auth_cache']));
         }

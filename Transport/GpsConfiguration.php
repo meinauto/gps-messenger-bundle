@@ -11,6 +11,7 @@ final class GpsConfiguration implements GpsConfigurationInterface
 {
     private string $topicName;
     private string $subscriptionName;
+    private bool $compressMessageBody;
     private array $clientConfig;
     private array $topicOptions;
     private array $subscriptionOptions;
@@ -19,6 +20,7 @@ final class GpsConfiguration implements GpsConfigurationInterface
     public function __construct(
         string $queueName,
         string $subscriptionName,
+        bool $compressMessageBody,
         array $clientConfig,
         array $topicOptions,
         array $subscriptionOptions,
@@ -26,6 +28,7 @@ final class GpsConfiguration implements GpsConfigurationInterface
     ) {
         $this->topicName = $queueName;
         $this->subscriptionName = $subscriptionName;
+        $this->compressMessageBody = $compressMessageBody;
         $this->clientConfig = $clientConfig;
         $this->topicOptions = $topicOptions;
         $this->subscriptionOptions = $subscriptionOptions;
@@ -40,6 +43,11 @@ final class GpsConfiguration implements GpsConfigurationInterface
     public function getSubscriptionName(): string
     {
         return $this->subscriptionName;
+    }
+
+    public function compressMessageBody(): bool
+    {
+        return $this->compressMessageBody;
     }
 
     public function getClientConfig(): array

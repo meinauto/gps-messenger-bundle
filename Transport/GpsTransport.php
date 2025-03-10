@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace PetitPress\GpsMessengerBundle\Transport;
 
 use Google\Cloud\PubSub\PubSubClient;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Transport\Serialization\SerializerInterface;
 use Symfony\Component\Messenger\Transport\SetupableTransportInterface;
@@ -19,16 +20,20 @@ final class GpsTransport implements TransportInterface, SetupableTransportInterf
     private GpsConfigurationInterface $gpsConfiguration;
     private SerializerInterface $serializer;
     private GpsReceiver $receiver;
-    private GpsSender $sender;
+    private GpsBatchSender $sender;
+    private LoggerInterface $logger;
 
     public function __construct(
         PubSubClient $pubSubClient,
         GpsConfigurationInterface $gpsConfiguration,
-        SerializerInterface $serializer
+        SerializerInterface $serializer,
+        LoggerInterface $logger,
+
     ) {
         $this->pubSubClient = $pubSubClient;
         $this->gpsConfiguration = $gpsConfiguration;
         $this->serializer = $serializer;
+        $this->logger = $logger;
     }
 
     /**
@@ -70,19 +75,24 @@ final class GpsTransport implements TransportInterface, SetupableTransportInterf
             return $this->receiver;
         }
 
-        $this->receiver = new GpsReceiver($this->pubSubClient, $this->gpsConfiguration, $this->serializer);
+        $this->receiver = new GpsReceiver(
+            $this->pubSubClient,
+            $this->gpsConfiguration,
+            $this->serializer,
+            $this->logger
+        );
 
         return $this->receiver;
     }
 
-    public function getSender(): GpsSender
+    public function getSender(): GpsBatchSender
     {
         /** @psalm-suppress RedundantPropertyInitializationCheck */
         if (isset($this->sender)) {
             return $this->sender;
         }
 
-        $this->sender = new GpsSender($this->pubSubClient, $this->gpsConfiguration, $this->serializer);
+        $this->sender = new GpsBatchSender($this->pubSubClient, $this->gpsConfiguration, $this->serializer);
 
         return $this->sender;
     }

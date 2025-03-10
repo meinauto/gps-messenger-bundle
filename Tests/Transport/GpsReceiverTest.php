@@ -47,11 +47,13 @@ class GpsReceiverTest extends TestCase
         $this->subscriptionMock = $this->createMock(Subscription::class);
         /** @var SerializerInterface&MockObject $serializerMock */
         $serializerMock = $this->createMock(SerializerInterface::class);
+        $loggerMock = $this->createMock(\Psr\Log\LoggerInterface::class);
 
         $this->gpsReceiver = new GpsReceiver(
             $this->pubSubClientMock,
             $this->gpsConfigurationMock,
             $serializerMock,
+            $loggerMock
         );
     }
 
@@ -67,9 +69,8 @@ class GpsReceiverTest extends TestCase
 
         $this->subscriptionMock
             ->expects($this->once())
-            ->method('modifyAckDeadline')
-            ->with($gpsMessage, 0)
-        ;
+            ->method('acknowledge')
+            ->with($gpsMessage);
 
         $this->pubSubClientMock
             ->expects($this->once())
