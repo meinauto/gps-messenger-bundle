@@ -141,6 +141,7 @@ final class GpsReceiver implements ReceiverInterface
         $envelope = $this->serializer->decode([
             'body' => $body,
             'headers' => $headers,
+            'deliveryAttempts' => $message->deliveryAttempt(),
         ]);
 
         return $envelope->with(new GpsReceivedStamp($message));
