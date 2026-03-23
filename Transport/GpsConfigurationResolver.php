@@ -13,6 +13,7 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
 final class GpsConfigurationResolver implements GpsConfigurationResolverInterface
 {
     private const INT_NORMALIZER_KEY = 'int';
+    private const FLOAT_NORMALIZER_KEY = 'float';
     private const BOOL_NORMALIZER_KEY = 'bool';
     private const NORMALIZABLE_SUBSCRIPTION_OPTIONS = [
         self::INT_NORMALIZER_KEY => ['ackDeadlineSeconds', 'maxDeliveryAttempts'],
@@ -21,6 +22,11 @@ final class GpsConfigurationResolver implements GpsConfigurationResolverInterfac
     private const NORMALIZABLE_SUBSCRIPTION_PULL_OPTIONS = [
         self::INT_NORMALIZER_KEY => ['maxMessages'],
         self::BOOL_NORMALIZER_KEY => ['returnImmediately'],
+    ];
+    private const NORMALIZABLE_BATCH_OPTIONS = [
+        self::INT_NORMALIZER_KEY => ['batchSize'],
+        self::FLOAT_NORMALIZER_KEY => ['callPeriod'],
+        self::BOOL_NORMALIZER_KEY => ['enabled'],
     ];
 
     /**
@@ -53,6 +59,24 @@ final class GpsConfigurationResolver implements GpsConfigurationResolverInterfac
                         $data[$optionName] = (int) filter_var($optionValue, FILTER_SANITIZE_NUMBER_INT);
                         break;
                     case \in_array($optionName, self::NORMALIZABLE_SUBSCRIPTION_PULL_OPTIONS[self::BOOL_NORMALIZER_KEY], true):
+                        $data[$optionName] = filter_var($optionValue, FILTER_VALIDATE_BOOLEAN);
+                        break;
+                }
+            }
+
+            return $data;
+        };
+
+        $batchOptionsNormalizer = static function (Options $options, $data) {
+            foreach ($data ?? [] as $optionName => $optionValue) {
+                switch ($optionName) {
+                    case \in_array($optionName, self::NORMALIZABLE_BATCH_OPTIONS[self::INT_NORMALIZER_KEY], true):
+                        $data[$optionName] = (int) filter_var($optionValue, FILTER_SANITIZE_NUMBER_INT);
+                        break;
+                    case \in_array($optionName, self::NORMALIZABLE_BATCH_OPTIONS[self::FLOAT_NORMALIZER_KEY], true):
+                        $data[$optionName] = (float) filter_var($optionValue, FILTER_SANITIZE_NUMBER_FLOAT);
+                        break;
+                    case \in_array($optionName, self::NORMALIZABLE_BATCH_OPTIONS[self::BOOL_NORMALIZER_KEY], true):
                         $data[$optionName] = filter_var($optionValue, FILTER_VALIDATE_BOOLEAN);
                         break;
                 }
@@ -160,6 +184,9 @@ final class GpsConfigurationResolver implements GpsConfigurationResolverInterfac
             )
             ->setDefault('compress_message_body', false)
             ->setAllowedTypes('compress_message_body', 'bool')
+            ->setDefault('batch', [])
+            ->setAllowedTypes('batch', 'array')
+            ->setNormalizer('batch', $batchOptionsNormalizer)
             ->setAllowedTypes('client_config', 'array')
         ;
 
@@ -172,7 +199,8 @@ final class GpsConfigurationResolver implements GpsConfigurationResolverInterfac
             $resolvedOptions['client_config'],
             $resolvedOptions['topic']['options'],
             $resolvedOptions['subscription']['options'],
-            $resolvedOptions['subscription']['pull']
+            $resolvedOptions['subscription']['pull'],
+            $resolvedOptions['batch']
         );
     }
 

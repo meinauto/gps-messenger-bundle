@@ -8,6 +8,7 @@ use Google\Cloud\PubSub\PubSubClient;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Transport\Serialization\SerializerInterface;
+use Symfony\Component\Messenger\Transport\Sender\SenderInterface;
 use Symfony\Component\Messenger\Transport\SetupableTransportInterface;
 use Symfony\Component\Messenger\Transport\TransportInterface;
 
@@ -20,7 +21,7 @@ final class GpsTransport implements TransportInterface, SetupableTransportInterf
     private GpsConfigurationInterface $gpsConfiguration;
     private SerializerInterface $serializer;
     private GpsReceiver $receiver;
-    private GpsBatchSender $sender;
+    private SenderInterface $sender;
     private LoggerInterface $logger;
 
     public function __construct(
@@ -85,14 +86,16 @@ final class GpsTransport implements TransportInterface, SetupableTransportInterf
         return $this->receiver;
     }
 
-    public function getSender(): GpsBatchSender
+    public function getSender(): SenderInterface
     {
         /** @psalm-suppress RedundantPropertyInitializationCheck */
         if (isset($this->sender)) {
             return $this->sender;
         }
 
-        $this->sender = new GpsBatchSender($this->pubSubClient, $this->gpsConfiguration, $this->serializer);
+        $this->sender = $this->gpsConfiguration->isBatchingEnabled()
+            ? new GpsBatchSender($this->pubSubClient, $this->gpsConfiguration, $this->serializer)
+            : new GpsSender($this->pubSubClient, $this->gpsConfiguration, $this->serializer);
 
         return $this->sender;
     }

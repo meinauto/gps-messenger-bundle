@@ -34,6 +34,10 @@ final class GpsBatchSender implements SenderInterface
         $this->pubSubClient = $pubSubClient;
         $this->gpsConfiguration = $gpsConfiguration;
         $this->serializer = $serializer;
+
+        $batchOptions = $this->gpsConfiguration->getBatchOptions();
+        $this->batchOptions['batchSize'] = $batchOptions['batchSize'] ?? $this->batchOptions['batchSize'];
+        $this->batchOptions['callPeriod'] = $batchOptions['callPeriod'] ?? $this->batchOptions['callPeriod'];
     }
 
     public function send(Envelope $envelope): Envelope
