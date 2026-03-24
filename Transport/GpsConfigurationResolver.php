@@ -184,7 +184,7 @@ final class GpsConfigurationResolver implements GpsConfigurationResolverInterfac
             )
             ->setDefault('compress_message_body', false)
             ->setAllowedTypes('compress_message_body', 'bool')
-            ->setDefault('batch', [])
+            ->setDefault('batch', ['enabled' => true])
             ->setAllowedTypes('batch', 'array')
             ->setNormalizer('batch', $batchOptionsNormalizer)
             ->setAllowedTypes('client_config', 'array')

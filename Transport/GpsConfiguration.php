@@ -80,6 +80,6 @@ final class GpsConfiguration implements GpsConfigurationInterface
 
     public function isBatchingEnabled(): bool
     {
-        return $this->batchOptions['enabled'] ?? true;
+        return $this->batchOptions['enabled'];
     }
 }
