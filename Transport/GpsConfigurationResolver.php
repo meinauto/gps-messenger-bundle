@@ -67,7 +67,7 @@ final class GpsConfigurationResolver implements GpsConfigurationResolverInterfac
             return $data;
         };
 
-        $batchOptionsNormalizer = static function (Options $options, $data) {
+        $batchSenderOptionsNormalizer = static function (Options $options, $data) {
             foreach ($data ?? [] as $optionName => $optionValue) {
                 switch ($optionName) {
                     case \in_array($optionName, self::NORMALIZABLE_BATCH_OPTIONS[self::INT_NORMALIZER_KEY], true):
@@ -184,9 +184,9 @@ final class GpsConfigurationResolver implements GpsConfigurationResolverInterfac
             )
             ->setDefault('compress_message_body', false)
             ->setAllowedTypes('compress_message_body', 'bool')
-            ->setDefault('batch', ['enabled' => true])
-            ->setAllowedTypes('batch', 'array')
-            ->setNormalizer('batch', $batchOptionsNormalizer)
+            ->setDefault('batchSender', ['enabled' => true])
+            ->setAllowedTypes('batchSender', 'array')
+            ->setNormalizer('batchSender', $batchSenderOptionsNormalizer)
             ->setAllowedTypes('client_config', 'array')
         ;
 
@@ -200,7 +200,7 @@ final class GpsConfigurationResolver implements GpsConfigurationResolverInterfac
             $resolvedOptions['topic']['options'],
             $resolvedOptions['subscription']['options'],
             $resolvedOptions['subscription']['pull'],
-            $resolvedOptions['batch']
+            $resolvedOptions['batchSender']
         );
     }
 

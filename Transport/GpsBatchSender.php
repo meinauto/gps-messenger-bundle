@@ -35,7 +35,7 @@ final class GpsBatchSender implements SenderInterface
         $this->gpsConfiguration = $gpsConfiguration;
         $this->serializer = $serializer;
 
-        $batchOptions = $this->gpsConfiguration->getBatchOptions();
+        $batchOptions = $this->gpsConfiguration->getBatchSenderOptions();
         $this->batchOptions['batchSize'] = $batchOptions['batchSize'] ?? $this->batchOptions['batchSize'];
         $this->batchOptions['callPeriod'] = $batchOptions['callPeriod'] ?? $this->batchOptions['callPeriod'];
     }

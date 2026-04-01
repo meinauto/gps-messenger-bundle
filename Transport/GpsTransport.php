@@ -93,7 +93,7 @@ final class GpsTransport implements TransportInterface, SetupableTransportInterf
             return $this->sender;
         }
 
-        $this->sender = $this->gpsConfiguration->isBatchingEnabled()
+        $this->sender = $this->gpsConfiguration->isBatchSenderEnabled()
             ? new GpsBatchSender($this->pubSubClient, $this->gpsConfiguration, $this->serializer)
             : new GpsSender($this->pubSubClient, $this->gpsConfiguration, $this->serializer);
 

@@ -39,7 +39,7 @@ interface GpsConfigurationInterface
      */
     public function getSubscriptionPullOptions(): array;
 
-    public function getBatchOptions(): array;
+    public function getBatchSenderOptions(): array;
 
-    public function isBatchingEnabled(): bool;
+    public function isBatchSenderEnabled(): bool;
 }

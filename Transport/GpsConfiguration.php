@@ -16,7 +16,7 @@ final class GpsConfiguration implements GpsConfigurationInterface
     private array $topicOptions;
     private array $subscriptionOptions;
     private array $subscriptionPullOptions;
-    private array $batchOptions;
+    private array $batchSenderOptions;
 
     public function __construct(
         string $queueName,
@@ -26,7 +26,7 @@ final class GpsConfiguration implements GpsConfigurationInterface
         array $topicOptions,
         array $subscriptionOptions,
         array $subscriptionPullOptions,
-        array $batchOptions
+        array $batchSenderOptions
     ) {
         $this->topicName = $queueName;
         $this->subscriptionName = $subscriptionName;
@@ -35,7 +35,7 @@ final class GpsConfiguration implements GpsConfigurationInterface
         $this->topicOptions = $topicOptions;
         $this->subscriptionOptions = $subscriptionOptions;
         $this->subscriptionPullOptions = $subscriptionPullOptions;
-        $this->batchOptions = $batchOptions;
+        $this->batchSenderOptions = $batchSenderOptions;
     }
 
     public function getTopicName(): string
@@ -73,13 +73,13 @@ final class GpsConfiguration implements GpsConfigurationInterface
         return $this->subscriptionPullOptions;
     }
 
-    public function getBatchOptions(): array
+    public function getBatchSenderOptions(): array
     {
-        return $this->batchOptions;
+        return $this->batchSenderOptions;
     }
 
-    public function isBatchingEnabled(): bool
+    public function isBatchSenderEnabled(): bool
     {
-        return $this->batchOptions['enabled'];
+        return $this->batchSenderOptions['enabled'];
     }
 }
