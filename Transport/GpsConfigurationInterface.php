@@ -38,4 +38,8 @@ interface GpsConfigurationInterface
      * @see Subscription::pull options
      */
     public function getSubscriptionPullOptions(): array;
+
+    public function getBatchSenderOptions(): array;
+
+    public function isBatchSenderEnabled(): bool;
 }
