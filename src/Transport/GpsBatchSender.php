@@ -52,10 +52,15 @@ final class GpsBatchSender implements SenderInterface
         $encodedMessage = $this->serializer->encode($envelope);
 
         $messageBuilder = new MessageBuilder();
-        try {
-            $data = json_encode($encodedMessage, JSON_THROW_ON_ERROR);
-        } catch (\JsonException $exception) {
-            throw new TransportException($exception->getMessage(), 0, $exception);
+        $headersAsAttributes = $this->gpsConfiguration->shouldUseHeadersAsAttributes();
+        if ($headersAsAttributes) {
+            $data = $encodedMessage['body'];
+        } else {
+            try {
+                $data = json_encode($encodedMessage, JSON_THROW_ON_ERROR);
+            } catch (\JsonException $exception) {
+                throw new TransportException($exception->getMessage(), 0, $exception);
+            }
         }
 
         $compressMessageBody = $this->gpsConfiguration->shouldCompressMessageBody();
@@ -75,6 +80,12 @@ final class GpsBatchSender implements SenderInterface
         $messageBuilder = $messageBuilder->setData($data);
         if ($compressMessageBody) {
             $messageBuilder = $messageBuilder->addAttribute('compressed-message-body', 'true');
+        }
+
+        if ($headersAsAttributes) {
+            foreach ($encodedMessage['headers'] ?? [] as $headerName => $headerValue) {
+                $messageBuilder = $messageBuilder->addAttribute($headerName, $headerValue);
+            }
         }
 
         if (! $this->gpsConfiguration->shouldUseMessengerRetry()) {

@@ -39,6 +39,7 @@ final class GpsConfigurationTest extends TestCase
         static::assertSame($expectedConfiguration->getTopicOptions(), $configuration->getTopicOptions());
         static::assertSame($expectedConfiguration->getBatchSenderOptions(), $configuration->getBatchSenderOptions());
         static::assertSame($expectedConfiguration->isBatchSenderEnabled(), $configuration->isBatchSenderEnabled());
+        static::assertSame($expectedConfiguration->shouldUseHeadersAsAttributes(), $configuration->shouldUseHeadersAsAttributes());
     }
 
     /**
@@ -537,6 +538,44 @@ final class GpsConfigurationTest extends TestCase
                     [],
                     ['maxMessages' => 10],
                     ['enabled' => true, 'batchSize' => 25, 'callPeriod' => 0.2]
+                ),
+            ],
+            'headers_as_attributes is set to true' => [
+                'dsn' => 'gps://default',
+                'options' => [
+                    'headers_as_attributes' => true,
+                ],
+                'expectedConfiguration' => new GpsConfiguration(
+                    GpsConfigurationResolverInterface::DEFAULT_TOPIC_NAME,
+                    true,
+                    GpsConfigurationResolverInterface::DEFAULT_TOPIC_NAME,
+                    true,
+                    false,
+                    false,
+                    [],
+                    [],
+                    [],
+                    ['maxMessages' => 10],
+                    ['enabled' => false],
+                    true
+                ),
+            ],
+            'DSN: headers_as_attributes contains true' => [
+                'dsn' => 'gps://default?topic[name]=foo&subscription[name]=bar&headers_as_attributes=true',
+                'options' => [],
+                'expectedConfiguration' => new GpsConfiguration(
+                    'foo',
+                    true,
+                    'bar',
+                    true,
+                    false,
+                    false,
+                    [],
+                    [],
+                    [],
+                    ['maxMessages' => 10],
+                    ['enabled' => false],
+                    true
                 ),
             ],
         ];

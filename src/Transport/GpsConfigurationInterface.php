@@ -26,6 +26,13 @@ interface GpsConfigurationInterface
     public function shouldCompressMessageBody(): bool;
 
     /**
+     * Whether the Symfony Messenger headers (envelope "headers", e.g. "type" and
+     * "X-Message-Stamp-*") should be sent as Google Pub/Sub message attributes
+     * instead of being embedded into the JSON-encoded message body.
+     */
+    public function shouldUseHeadersAsAttributes(): bool;
+
+    /**
      * @see PubSubClient constructor options
      * @return array<string, mixed>
      */

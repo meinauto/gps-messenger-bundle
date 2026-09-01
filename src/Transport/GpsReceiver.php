@@ -135,15 +135,32 @@ final class GpsReceiver implements KeepaliveReceiverInterface
             $data = $decompressedData;
         }
 
-        try {
-            /** @var array<string, mixed> $rawData */
-            $rawData = json_decode($data, true, 512, JSON_THROW_ON_ERROR);
-        } catch (JsonException $exception) {
-            throw new MessageDecodingFailedException($exception->getMessage(), 0, $exception);
+        if ($this->gpsConfiguration->shouldUseHeadersAsAttributes()) {
+            $headers = $attributes;
+            unset($headers['compressed-message-body']);
+
+            $rawData = ['body' => $data, 'headers' => $headers];
+        } else {
+            try {
+                /** @var array<string, mixed> $rawData */
+                $rawData = json_decode($data, true, 512, JSON_THROW_ON_ERROR);
+            } catch (JsonException $exception) {
+                throw new MessageDecodingFailedException($exception->getMessage(), 0, $exception);
+            }
         }
 
         /** @var array{body: string, headers?: array<string, string>} $rawData */
-        return $this->serializer->decode($rawData)->with(new GpsReceivedStamp($message));
+        $envelope = $this->serializer->decode($rawData);
+
+        // Symfony's serializer may return an Envelope wrapping a MessageDecodingFailedException
+        // instead of throwing it (e.g. when headers/type are missing), so it needs to be re-thrown
+        // here to be handled as a poison message by the caller.
+        $decodedMessage = $envelope->getMessage();
+        if ($decodedMessage instanceof MessageDecodingFailedException) {
+            throw $decodedMessage;
+        }
+
+        return $envelope->with(new GpsReceivedStamp($message));
     }
 
     public function keepalive(Envelope $envelope, ?int $seconds = null): void
