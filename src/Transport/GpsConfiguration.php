@@ -14,6 +14,7 @@ final class GpsConfiguration implements GpsConfigurationInterface
     private string $subscriptionName;
     private bool   $subscriptionCreationEnabled;
     private bool   $useMessengerRetry;
+    private bool   $compressMessageBody;
 
     /**
      * @var array<string, mixed>
@@ -47,6 +48,7 @@ final class GpsConfiguration implements GpsConfigurationInterface
         string $subscriptionName,
         bool $subscriptionCreationEnabled,
         bool $useMessengerRetry,
+        bool $compressMessageBody,
         array $clientConfig,
         array $topicOptions,
         array $subscriptionOptions,
@@ -57,6 +59,7 @@ final class GpsConfiguration implements GpsConfigurationInterface
         $this->subscriptionName = $subscriptionName;
         $this->subscriptionCreationEnabled = $subscriptionCreationEnabled;
         $this->useMessengerRetry = $useMessengerRetry;
+        $this->compressMessageBody = $compressMessageBody;
         $this->clientConfig = $clientConfig;
         $this->topicOptions = $topicOptions;
         $this->subscriptionOptions = $subscriptionOptions;
@@ -86,6 +89,11 @@ final class GpsConfiguration implements GpsConfigurationInterface
     public function shouldUseMessengerRetry(): bool
     {
         return $this->useMessengerRetry;
+    }
+
+    public function shouldCompressMessageBody(): bool
+    {
+        return $this->compressMessageBody;
     }
 
     public function getClientConfig(): array

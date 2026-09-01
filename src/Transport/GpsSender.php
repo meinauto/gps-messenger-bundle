@@ -43,9 +43,28 @@ final class GpsSender implements SenderInterface
 
         $messageBuilder = new MessageBuilder();
         try {
-            $messageBuilder = $messageBuilder->setData(json_encode($encodedMessage, JSON_THROW_ON_ERROR));
+            $data = json_encode($encodedMessage, JSON_THROW_ON_ERROR);
         } catch (\JsonException $exception) {
             throw new TransportException($exception->getMessage(), 0, $exception);
+        }
+
+        $compressMessageBody = $this->gpsConfiguration->shouldCompressMessageBody();
+        if ($compressMessageBody) {
+            if (! \function_exists('gzencode')) {
+                throw new TransportException('Message body compression requires the "zlib" PHP extension.');
+            }
+
+            $compressedData = gzencode($data);
+            if (false === $compressedData) {
+                throw new TransportException('Failed to compress message body.');
+            }
+
+            $data = $compressedData;
+        }
+
+        $messageBuilder = $messageBuilder->setData($data);
+        if ($compressMessageBody) {
+            $messageBuilder = $messageBuilder->addAttribute('compressed-message-body', 'true');
         }
 
         if (! $this->gpsConfiguration->shouldUseMessengerRetry()) {

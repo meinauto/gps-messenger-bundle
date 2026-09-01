@@ -23,6 +23,8 @@ interface GpsConfigurationInterface
 
     public function shouldUseMessengerRetry(): bool;
 
+    public function shouldCompressMessageBody(): bool;
+
     /**
      * @see PubSubClient constructor options
      * @return array<string, mixed>

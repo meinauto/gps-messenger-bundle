@@ -230,6 +230,60 @@ class GpsReceiverTest extends TestCase
         static::assertSame([], $envelopes);
     }
 
+    public function testItDecompressesCompressedMessageBody(): void
+    {
+        $decodedBody = ['body' => 'hello', 'headers' => []];
+        $compressedData = gzencode((string) json_encode($decodedBody));
+        $gpsMessage = new Message([
+            'data' => $compressedData,
+            'attributes' => ['compressed-message-body' => 'true'],
+        ]);
+
+        $this->gpsConfigurationMock
+            ->expects(static::once())
+            ->method('getSubscriptionName')
+            ->willReturn(self::SUBSCRIPTION_NAME)
+        ;
+
+        $this->gpsConfigurationMock
+            ->expects(static::once())
+            ->method('getSubscriptionPullOptions')
+            ->willReturn([])
+        ;
+
+        $this->subscriptionMock
+            ->expects(static::once())
+            ->method('pull')
+            ->willReturn([$gpsMessage])
+        ;
+
+        $this->pubSubClientMock
+            ->expects(static::once())
+            ->method('subscription')
+            ->with(self::SUBSCRIPTION_NAME)
+            ->willReturn($this->subscriptionMock)
+        ;
+
+        $serializerMock = $this->createMock(SerializerInterface::class);
+        $serializerMock
+            ->expects(static::once())
+            ->method('decode')
+            ->with($decodedBody)
+            ->willReturn(EnvelopeFactory::create())
+        ;
+
+        $gpsReceiver = new GpsReceiver(
+            $this->pubSubClientMock,
+            $this->gpsConfigurationMock,
+            $serializerMock,
+            $this->loggerMock,
+        );
+
+        $envelopes = iterator_to_array($gpsReceiver->get());
+
+        static::assertCount(1, $envelopes);
+    }
+
     #[AllowMockObjectsWithoutExpectations]
     public function testItThrowsAnExceptionInsteadOfRejecting(): void
     {

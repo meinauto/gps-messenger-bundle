@@ -119,9 +119,25 @@ final class GpsReceiver implements KeepaliveReceiverInterface
      */
     private function createEnvelopeFromPubSubMessage(Message $message): Envelope
     {
+        $data = $message->data();
+
+        $attributes = $message->attributes();
+        if (($attributes['compressed-message-body'] ?? null) === 'true') {
+            if (! \function_exists('gzdecode')) {
+                throw new MessageDecodingFailedException('Message body decompression requires the "zlib" PHP extension.');
+            }
+
+            $decompressedData = @gzdecode($data);
+            if (false === $decompressedData) {
+                throw new MessageDecodingFailedException('Failed to decompress message body.');
+            }
+
+            $data = $decompressedData;
+        }
+
         try {
             /** @var array<string, mixed> $rawData */
-            $rawData = json_decode($message->data(), true, 512, JSON_THROW_ON_ERROR);
+            $rawData = json_decode($data, true, 512, JSON_THROW_ON_ERROR);
         } catch (JsonException $exception) {
             throw new MessageDecodingFailedException($exception->getMessage(), 0, $exception);
         }

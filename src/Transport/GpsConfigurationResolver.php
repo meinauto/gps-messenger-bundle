@@ -51,6 +51,8 @@ final class GpsConfigurationResolver implements GpsConfigurationResolverInterfac
         $optionsResolver
             ->setDefault('use_messenger_retry', false)
             ->setAllowedTypes('use_messenger_retry', 'bool')
+            ->setDefault('compress_message_body', false)
+            ->setAllowedTypes('compress_message_body', 'bool')
             ->setDefault('client_config', [])
             ->setOptions('topic', function (OptionsResolver $topicResolver): void {
                 $topicResolver
@@ -99,6 +101,7 @@ final class GpsConfigurationResolver implements GpsConfigurationResolverInterfac
             $resolvedOptions['subscription']['name'],
             $resolvedOptions['subscription']['createIfNotExist'],
             $resolvedOptions['use_messenger_retry'],
+            $resolvedOptions['compress_message_body'],
             $resolvedOptions['client_config'],
             $resolvedOptions['topic']['options'],
             $resolvedOptions['subscription']['options'],

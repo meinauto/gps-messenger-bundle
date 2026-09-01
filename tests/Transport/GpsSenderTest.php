@@ -55,6 +55,11 @@ class GpsSenderTest extends TestCase
         $this->serializerMock = $this->createMock(SerializerInterface::class);
         $this->topicMock = $this->createMock(Topic::class);
 
+        $this->gpsConfigurationMock
+            ->method('shouldCompressMessageBody')
+            ->willReturn(false)
+        ;
+
         $this->gpsSender = new GpsSender(
             $this->pubSubClientMock,
             $this->gpsConfigurationMock,
@@ -267,5 +272,55 @@ class GpsSenderTest extends TestCase
             ->willReturn($this->topicMock);
 
         self::assertSame($envelope, $this->gpsSender->send($envelope));
+    }
+
+    public function testItCompressesMessageBodyWhenEnabled(): void
+    {
+        $envelope = EnvelopeFactory::create();
+        $envelopeArray = ['body' => 'hello'];
+
+        $this->serializerMock
+            ->expects(static::once())
+            ->method('encode')
+            ->with($envelope)
+            ->willReturn($envelopeArray)
+        ;
+
+        $this->gpsConfigurationMock = $this->createMock(GpsConfigurationInterface::class);
+        $this->gpsConfigurationMock
+            ->method('shouldCompressMessageBody')
+            ->willReturn(true)
+        ;
+
+        $this->gpsConfigurationMock
+            ->expects(static::once())
+            ->method('getTopicName')
+            ->willReturn(self::TOPIC_NAME)
+        ;
+
+        $expectedData = gzencode((string) json_encode($envelopeArray));
+
+        $this->topicMock
+            ->expects(static::once())
+            ->method('publish')
+            ->with(new Message([
+                'data' => $expectedData,
+                'attributes' => ['compressed-message-body' => 'true'],
+            ]))
+        ;
+
+        $this->pubSubClientMock
+            ->expects(static::once())
+            ->method('topic')
+            ->with(self::TOPIC_NAME)
+            ->willReturn($this->topicMock);
+
+        $gpsSender = new GpsSender(
+            $this->pubSubClientMock,
+            $this->gpsConfigurationMock,
+            $this->serializerMock,
+        );
+
+        self::assertSame($envelope, $gpsSender->send($envelope));
     }
 }
