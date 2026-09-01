@@ -75,7 +75,9 @@ final class GpsTransport implements TransportInterface, KeepaliveReceiverInterfa
     public function getSender(): SenderInterface
     {
         /** @psalm-suppress RedundantPropertyInitializationCheck */
-        return $this->sender ??= new GpsSender($this->pubSubClient, $this->gpsConfiguration, $this->serializer);
+        return $this->sender ??= ($this->gpsConfiguration->isBatchSenderEnabled()
+            ? new GpsBatchSender($this->pubSubClient, $this->gpsConfiguration, $this->serializer)
+            : new GpsSender($this->pubSubClient, $this->gpsConfiguration, $this->serializer));
     }
 
     public function setup(): void

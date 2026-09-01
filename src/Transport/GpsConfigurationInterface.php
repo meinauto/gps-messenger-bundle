@@ -48,4 +48,12 @@ interface GpsConfigurationInterface
      * @return array<string, mixed>
      */
     public function getSubscriptionPullOptions(): array;
+
+    /**
+     * @see Topic::batchPublisher options
+     * @return array<string, mixed>
+     */
+    public function getBatchSenderOptions(): array;
+
+    public function isBatchSenderEnabled(): bool;
 }
