@@ -9,6 +9,7 @@ use Google\Cloud\PubSub\Message;
 use Google\Cloud\PubSub\PubSubClient;
 use Google\Cloud\PubSub\Subscription;
 use Google\Cloud\PubSub\Topic;
+use PetitPress\GpsMessengerBundle\Transport\GpsBatchSender;
 use PetitPress\GpsMessengerBundle\Transport\GpsConfigurationInterface;
 use PetitPress\GpsMessengerBundle\Transport\GpsReceiver;
 use PetitPress\GpsMessengerBundle\Transport\GpsSender;
@@ -285,5 +286,20 @@ class GpsTransportTest extends TestCase
     public function testGetSender(): void
     {
         static::assertInstanceOf(GpsSender::class, $this->subject->getSender());
+    }
+
+    public function testGetSenderReturnsBatchSenderWhenBatchSenderIsEnabled(): void
+    {
+        $this->gpsConfiguration
+            ->method('isBatchSenderEnabled')
+            ->willReturn(true)
+        ;
+
+        $this->gpsConfiguration
+            ->method('getBatchSenderOptions')
+            ->willReturn(['enabled' => true])
+        ;
+
+        static::assertInstanceOf(GpsBatchSender::class, $this->subject->getSender());
     }
 }

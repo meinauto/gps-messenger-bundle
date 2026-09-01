@@ -37,10 +37,16 @@ final class GpsConfiguration implements GpsConfigurationInterface
     private array  $subscriptionPullOptions;
 
     /**
+     * @var array<string, mixed>
+     */
+    private array  $batchSenderOptions;
+
+    /**
      * @param array<string, mixed>  $clientConfig
      * @param array<string, mixed>  $topicOptions
      * @param array<string, mixed>  $subscriptionOptions
      * @param array<string, mixed>  $subscriptionPullOptions
+     * @param array<string, mixed>  $batchSenderOptions
      */
     public function __construct(
         string $topicName,
@@ -52,7 +58,8 @@ final class GpsConfiguration implements GpsConfigurationInterface
         array $clientConfig,
         array $topicOptions,
         array $subscriptionOptions,
-        array $subscriptionPullOptions
+        array $subscriptionPullOptions,
+        array $batchSenderOptions = ['enabled' => false]
     ) {
         $this->topicName = $topicName;
         $this->topicCreationEnabled = $topicCreationEnabled;
@@ -64,6 +71,7 @@ final class GpsConfiguration implements GpsConfigurationInterface
         $this->topicOptions = $topicOptions;
         $this->subscriptionOptions = $subscriptionOptions;
         $this->subscriptionPullOptions = $subscriptionPullOptions;
+        $this->batchSenderOptions = $batchSenderOptions;
     }
 
     public function getTopicName(): string
@@ -114,5 +122,15 @@ final class GpsConfiguration implements GpsConfigurationInterface
     public function getSubscriptionPullOptions(): array
     {
         return $this->subscriptionPullOptions;
+    }
+
+    public function getBatchSenderOptions(): array
+    {
+        return $this->batchSenderOptions;
+    }
+
+    public function isBatchSenderEnabled(): bool
+    {
+        return (bool) ($this->batchSenderOptions['enabled'] ?? false);
     }
 }
