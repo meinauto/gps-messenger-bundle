@@ -18,6 +18,7 @@ use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
 use stdClass;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Exception\TransportException;
@@ -45,16 +46,23 @@ class GpsTransportTest extends TestCase
      */
     private MockObject $serializerMock;
 
+    /**
+     * @var LoggerInterface&MockObject
+     */
+    private MockObject $loggerMock;
+
     protected function setUp(): void
     {
         $this->pubSubClient = $this->createMock(PubSubClient::class);
         $this->gpsConfiguration = $this->createMock(GpsConfigurationInterface::class);
         $this->serializerMock = $this->createMock(SerializerInterface::class);
+        $this->loggerMock = $this->createMock(LoggerInterface::class);
 
         $this->subject = new GpsTransport(
             $this->pubSubClient,
             $this->gpsConfiguration,
-            $this->serializerMock
+            $this->serializerMock,
+            $this->loggerMock
         );
     }
 

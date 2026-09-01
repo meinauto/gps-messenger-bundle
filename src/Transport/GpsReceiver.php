@@ -9,6 +9,7 @@ use Google\Cloud\PubSub\PubSubClient;
 use JsonException;
 use LogicException;
 use PetitPress\GpsMessengerBundle\Transport\Stamp\GpsReceivedStamp;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Exception\MessageDecodingFailedException;
 use Symfony\Component\Messenger\Exception\TransportException;
@@ -26,7 +27,8 @@ final class GpsReceiver implements KeepaliveReceiverInterface
     public function __construct(
         private PubSubClient $pubSubClient,
         private GpsConfigurationInterface $gpsConfiguration,
-        private SerializerInterface $serializer
+        private SerializerInterface $serializer,
+        private LoggerInterface $logger
     ) {
     }
 
@@ -43,7 +45,16 @@ final class GpsReceiver implements KeepaliveReceiverInterface
                 ->pull($this->gpsConfiguration->getSubscriptionPullOptions());
 
             foreach ($messages as $message) {
-                yield $this->createEnvelopeFromPubSubMessage($message);
+                try {
+                    yield $this->createEnvelopeFromPubSubMessage($message);
+                } catch (MessageDecodingFailedException $exception) {
+                    $this->logger->warning($exception->getMessage(), ['exception' => $exception]);
+
+                    $this->pubSubClient
+                        ->subscription($this->gpsConfiguration->getSubscriptionName())
+                        ->acknowledge($message)
+                    ;
+                }
             }
         } catch (Throwable $exception) {
             throw new TransportException($exception->getMessage(), 0, $exception);

@@ -15,6 +15,7 @@ use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Exception\TransportException;
 use Symfony\Component\Messenger\Transport\Serialization\SerializerInterface;
 
@@ -41,6 +42,11 @@ class GpsReceiverTest extends TestCase
      */
     private MockObject $subscriptionMock;
 
+    /**
+     * @var LoggerInterface&MockObject
+     */
+    private MockObject $loggerMock;
+
     private GpsReceiver $gpsReceiver;
 
     protected function setUp(): void
@@ -48,12 +54,14 @@ class GpsReceiverTest extends TestCase
         $this->gpsConfigurationMock = $this->createMock(GpsConfigurationInterface::class);
         $this->pubSubClientMock = $this->createMock(PubSubClient::class);
         $this->subscriptionMock = $this->createMock(Subscription::class);
+        $this->loggerMock = $this->createMock(LoggerInterface::class);
         $serializerStub = static::createStub(SerializerInterface::class);
 
         $this->gpsReceiver = new GpsReceiver(
             $this->pubSubClientMock,
             $this->gpsConfigurationMock,
             $serializerStub,
+            $this->loggerMock,
         );
     }
 
@@ -175,6 +183,51 @@ class GpsReceiverTest extends TestCase
         $this->gpsReceiver->keepalive(
             EnvelopeFactory::create(new GpsReceivedStamp($gpsMessage)),
         );
+    }
+
+    public function testItLogsAndAcknowledgesUndecodableMessages(): void
+    {
+        $gpsMessage = new Message(['data' => 'not-valid-json']);
+
+        $this->gpsConfigurationMock
+            ->expects(static::exactly(2))
+            ->method('getSubscriptionName')
+            ->willReturn(self::SUBSCRIPTION_NAME)
+        ;
+
+        $this->gpsConfigurationMock
+            ->expects(static::once())
+            ->method('getSubscriptionPullOptions')
+            ->willReturn([])
+        ;
+
+        $this->subscriptionMock
+            ->expects(static::once())
+            ->method('pull')
+            ->willReturn([$gpsMessage])
+        ;
+
+        $this->subscriptionMock
+            ->expects(static::once())
+            ->method('acknowledge')
+            ->with($gpsMessage)
+        ;
+
+        $this->pubSubClientMock
+            ->expects(static::exactly(2))
+            ->method('subscription')
+            ->with(self::SUBSCRIPTION_NAME)
+            ->willReturn($this->subscriptionMock)
+        ;
+
+        $this->loggerMock
+            ->expects(static::once())
+            ->method('warning')
+        ;
+
+        $envelopes = iterator_to_array($this->gpsReceiver->get());
+
+        static::assertSame([], $envelopes);
     }
 
     #[AllowMockObjectsWithoutExpectations]
