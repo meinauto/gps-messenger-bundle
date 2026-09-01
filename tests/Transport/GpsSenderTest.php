@@ -323,4 +323,56 @@ class GpsSenderTest extends TestCase
 
         self::assertSame($envelope, $gpsSender->send($envelope));
     }
+
+    public function testItPublishesHeadersAsAttributesWhenEnabled(): void
+    {
+        $envelope = EnvelopeFactory::create();
+        $envelopeArray = ['body' => 'hello', 'headers' => ['type' => 'stdClass']];
+
+        $this->serializerMock
+            ->expects(static::once())
+            ->method('encode')
+            ->with($envelope)
+            ->willReturn($envelopeArray)
+        ;
+
+        $this->gpsConfigurationMock = $this->createMock(GpsConfigurationInterface::class);
+        $this->gpsConfigurationMock
+            ->method('shouldCompressMessageBody')
+            ->willReturn(false)
+        ;
+        $this->gpsConfigurationMock
+            ->method('shouldUseHeadersAsAttributes')
+            ->willReturn(true)
+        ;
+
+        $this->gpsConfigurationMock
+            ->expects(static::once())
+            ->method('getTopicName')
+            ->willReturn(self::TOPIC_NAME)
+        ;
+
+        $this->topicMock
+            ->expects(static::once())
+            ->method('publish')
+            ->with(new Message([
+                'data' => 'hello',
+                'attributes' => ['type' => 'stdClass'],
+            ]))
+        ;
+
+        $this->pubSubClientMock
+            ->expects(static::once())
+            ->method('topic')
+            ->with(self::TOPIC_NAME)
+            ->willReturn($this->topicMock);
+
+        $gpsSender = new GpsSender(
+            $this->pubSubClientMock,
+            $this->gpsConfigurationMock,
+            $this->serializerMock,
+        );
+
+        self::assertSame($envelope, $gpsSender->send($envelope));
+    }
 }

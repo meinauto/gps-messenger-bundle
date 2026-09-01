@@ -298,4 +298,66 @@ class GpsBatchSenderTest extends TestCase
 
         self::assertSame($envelope, $gpsBatchSender->send($envelope));
     }
+
+    public function testItPublishesHeadersAsAttributesWhenEnabled(): void
+    {
+        $envelope = EnvelopeFactory::create();
+        $envelopeArray = ['body' => 'hello', 'headers' => ['type' => 'stdClass']];
+
+        $this->serializerMock
+            ->expects(static::once())
+            ->method('encode')
+            ->with($envelope)
+            ->willReturn($envelopeArray)
+        ;
+
+        $this->gpsConfigurationMock = $this->createMock(GpsConfigurationInterface::class);
+        $this->gpsConfigurationMock
+            ->method('shouldCompressMessageBody')
+            ->willReturn(false)
+        ;
+        $this->gpsConfigurationMock
+            ->method('getBatchSenderOptions')
+            ->willReturn(['enabled' => true])
+        ;
+        $this->gpsConfigurationMock
+            ->method('shouldUseHeadersAsAttributes')
+            ->willReturn(true)
+        ;
+
+        $this->gpsConfigurationMock
+            ->expects(static::once())
+            ->method('getTopicName')
+            ->willReturn(self::TOPIC_NAME)
+        ;
+
+        $this->pubSubClientMock
+            ->expects(static::once())
+            ->method('topic')
+            ->with(self::TOPIC_NAME)
+            ->willReturn($this->topicMock);
+
+        $this->topicMock
+            ->expects(static::once())
+            ->method('batchPublisher')
+            ->willReturn($this->batchPublisherMock)
+        ;
+
+        $this->batchPublisherMock
+            ->expects(static::once())
+            ->method('publish')
+            ->with(new Message([
+                'data' => 'hello',
+                'attributes' => ['type' => 'stdClass'],
+            ]))
+        ;
+
+        $gpsBatchSender = new GpsBatchSender(
+            $this->pubSubClientMock,
+            $this->gpsConfigurationMock,
+            $this->serializerMock,
+        );
+
+        self::assertSame($envelope, $gpsBatchSender->send($envelope));
+    }
 }

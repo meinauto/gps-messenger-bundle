@@ -66,6 +66,8 @@ final class GpsConfigurationResolver implements GpsConfigurationResolverInterfac
             ->setAllowedTypes('use_messenger_retry', 'bool')
             ->setDefault('compress_message_body', false)
             ->setAllowedTypes('compress_message_body', 'bool')
+            ->setDefault('headers_as_attributes', false)
+            ->setAllowedTypes('headers_as_attributes', 'bool')
             ->setDefault('batchSender', ['enabled' => false])
             ->setAllowedTypes('batchSender', 'array')
             ->setNormalizer('batchSender', $batchSenderOptionsNormalizer)
@@ -122,7 +124,8 @@ final class GpsConfigurationResolver implements GpsConfigurationResolverInterfac
             $resolvedOptions['topic']['options'],
             $resolvedOptions['subscription']['options'],
             $resolvedOptions['subscription']['pull'],
-            $resolvedOptions['batchSender']
+            $resolvedOptions['batchSender'],
+            $resolvedOptions['headers_as_attributes']
         );
     }
 
@@ -182,6 +185,10 @@ final class GpsConfigurationResolver implements GpsConfigurationResolverInterfac
 
         if (isset($dnsOptions['use_messenger_retry']) && is_string($dnsOptions['use_messenger_retry'])) {
             $dnsOptions['use_messenger_retry'] = $this->toBool($dnsOptions['use_messenger_retry'], false);
+        }
+
+        if (isset($dnsOptions['headers_as_attributes']) && is_string($dnsOptions['headers_as_attributes'])) {
+            $dnsOptions['headers_as_attributes'] = $this->toBool($dnsOptions['headers_as_attributes'], false);
         }
 
         if (isset($dnsOptions['topic']['createIfNotExist']) && is_string($dnsOptions['topic']['createIfNotExist'])) {

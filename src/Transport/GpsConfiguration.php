@@ -15,6 +15,7 @@ final class GpsConfiguration implements GpsConfigurationInterface
     private bool   $subscriptionCreationEnabled;
     private bool   $useMessengerRetry;
     private bool   $compressMessageBody;
+    private bool   $headersAsAttributes;
 
     /**
      * @var array<string, mixed>
@@ -59,7 +60,8 @@ final class GpsConfiguration implements GpsConfigurationInterface
         array $topicOptions,
         array $subscriptionOptions,
         array $subscriptionPullOptions,
-        array $batchSenderOptions = ['enabled' => false]
+        array $batchSenderOptions = ['enabled' => false],
+        bool $headersAsAttributes = false
     ) {
         $this->topicName = $topicName;
         $this->topicCreationEnabled = $topicCreationEnabled;
@@ -72,6 +74,7 @@ final class GpsConfiguration implements GpsConfigurationInterface
         $this->subscriptionOptions = $subscriptionOptions;
         $this->subscriptionPullOptions = $subscriptionPullOptions;
         $this->batchSenderOptions = $batchSenderOptions;
+        $this->headersAsAttributes = $headersAsAttributes;
     }
 
     public function getTopicName(): string
@@ -132,5 +135,10 @@ final class GpsConfiguration implements GpsConfigurationInterface
     public function isBatchSenderEnabled(): bool
     {
         return (bool) ($this->batchSenderOptions['enabled'] ?? false);
+    }
+
+    public function shouldUseHeadersAsAttributes(): bool
+    {
+        return $this->headersAsAttributes;
     }
 }
