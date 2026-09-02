@@ -11,6 +11,7 @@ use PetitPress\GpsMessengerBundle\Transport\GpsTransportFactory;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Cache\CacheItemPoolInterface;
+use Psr\Log\NullLogger;
 use Symfony\Component\Messenger\Transport\Serialization\SerializerInterface;
 
 class GpsTransportFactoryTest extends TestCase
@@ -21,7 +22,8 @@ class GpsTransportFactoryTest extends TestCase
         $factory = new GpsTransportFactory(
             static::createStub(GpsConfigurationResolverInterface::class),
             static::createStub(CacheItemPoolInterface::class),
-            null
+            null,
+            new NullLogger()
         );
 
         static::assertSame($expected, $factory->supports($dsn, []));
@@ -32,7 +34,8 @@ class GpsTransportFactoryTest extends TestCase
         $factory = new GpsTransportFactory(
             new GpsConfigurationResolver(),
             static::createStub(CacheItemPoolInterface::class),
-            null
+            null,
+            new NullLogger()
         );
 
         $transport = $factory->createTransport(

@@ -9,6 +9,7 @@ use Google\Cloud\PubSub\Message;
 use Google\Cloud\PubSub\PubSubClient;
 use Google\Cloud\PubSub\Subscription;
 use Google\Cloud\PubSub\Topic;
+use PetitPress\GpsMessengerBundle\Transport\GpsBatchSender;
 use PetitPress\GpsMessengerBundle\Transport\GpsConfigurationInterface;
 use PetitPress\GpsMessengerBundle\Transport\GpsReceiver;
 use PetitPress\GpsMessengerBundle\Transport\GpsSender;
@@ -18,6 +19,7 @@ use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
 use stdClass;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Exception\TransportException;
@@ -45,16 +47,23 @@ class GpsTransportTest extends TestCase
      */
     private MockObject $serializerMock;
 
+    /**
+     * @var LoggerInterface&MockObject
+     */
+    private MockObject $loggerMock;
+
     protected function setUp(): void
     {
         $this->pubSubClient = $this->createMock(PubSubClient::class);
         $this->gpsConfiguration = $this->createMock(GpsConfigurationInterface::class);
         $this->serializerMock = $this->createMock(SerializerInterface::class);
+        $this->loggerMock = $this->createMock(LoggerInterface::class);
 
         $this->subject = new GpsTransport(
             $this->pubSubClient,
             $this->gpsConfiguration,
-            $this->serializerMock
+            $this->serializerMock,
+            $this->loggerMock
         );
     }
 
@@ -277,5 +286,20 @@ class GpsTransportTest extends TestCase
     public function testGetSender(): void
     {
         static::assertInstanceOf(GpsSender::class, $this->subject->getSender());
+    }
+
+    public function testGetSenderReturnsBatchSenderWhenBatchSenderIsEnabled(): void
+    {
+        $this->gpsConfiguration
+            ->method('isBatchSenderEnabled')
+            ->willReturn(true)
+        ;
+
+        $this->gpsConfiguration
+            ->method('getBatchSenderOptions')
+            ->willReturn(['enabled' => true])
+        ;
+
+        static::assertInstanceOf(GpsBatchSender::class, $this->subject->getSender());
     }
 }

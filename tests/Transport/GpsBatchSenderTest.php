@@ -4,24 +4,20 @@ declare(strict_types=1);
 
 namespace PetitPress\GpsMessengerBundle\Tests\Transport;
 
+use Google\Cloud\PubSub\BatchPublisher;
 use Google\Cloud\PubSub\Message;
 use Google\Cloud\PubSub\PubSubClient;
 use Google\Cloud\PubSub\Topic;
+use PetitPress\GpsMessengerBundle\Transport\GpsBatchSender;
 use PetitPress\GpsMessengerBundle\Transport\GpsConfigurationInterface;
-use PetitPress\GpsMessengerBundle\Transport\GpsSender;
 use PetitPress\GpsMessengerBundle\Transport\Stamp\AttributesStamp;
-use PetitPress\GpsMessengerBundle\Transport\Stamp\GpsSenderOptionsStamp;
 use PetitPress\GpsMessengerBundle\Transport\Stamp\OrderingKeyStamp;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Messenger\Stamp\RedeliveryStamp;
 use Symfony\Component\Messenger\Transport\Serialization\SerializerInterface;
 
-/**
- * @author Mickael Prévôt <mickael.prevot@ext.adeo.com>
- * @author Ronald Marfoldi <ronald.marfoldi@petitpress.sk>
- */
-class GpsSenderTest extends TestCase
+class GpsBatchSenderTest extends TestCase
 {
     private const ORDERED_KEY = 'ordered-key';
     private const TOPIC_NAME = 'topic-name';
@@ -46,7 +42,12 @@ class GpsSenderTest extends TestCase
      */
     private MockObject $topicMock;
 
-    private GpsSender $gpsSender;
+    /**
+     * @var BatchPublisher&MockObject
+     */
+    private MockObject $batchPublisherMock;
+
+    private GpsBatchSender $gpsBatchSender;
 
     protected function setUp(): void
     {
@@ -54,13 +55,19 @@ class GpsSenderTest extends TestCase
         $this->pubSubClientMock = $this->createMock(PubSubClient::class);
         $this->serializerMock = $this->createMock(SerializerInterface::class);
         $this->topicMock = $this->createMock(Topic::class);
+        $this->batchPublisherMock = $this->createMock(BatchPublisher::class);
 
         $this->gpsConfigurationMock
             ->method('shouldCompressMessageBody')
             ->willReturn(false)
         ;
 
-        $this->gpsSender = new GpsSender(
+        $this->gpsConfigurationMock
+            ->method('getBatchSenderOptions')
+            ->willReturn(['enabled' => true])
+        ;
+
+        $this->gpsBatchSender = new GpsBatchSender(
             $this->pubSubClientMock,
             $this->gpsConfigurationMock,
             $this->serializerMock,
@@ -84,53 +91,12 @@ class GpsSenderTest extends TestCase
             ->method('topic')
         ;
 
-        $this->topicMock
-            ->expects(static::never())
-            ->method('publish')
-        ;
-
         $this->gpsConfigurationMock
             ->expects(static::once())
             ->method('shouldUseMessengerRetry')
             ->willReturn(false);
 
-        self::assertSame($envelope, $this->gpsSender->send($envelope));
-    }
-
-    public function testItPublishesIfTheLastStampIsOfTypeRedeliveryWithRedeliveryEnabled(): void
-    {
-        $envelope = EnvelopeFactory::create(new RedeliveryStamp(0));
-        $envelopeArray = ['body' => []];
-
-        $this->serializerMock
-            ->expects(static::once())
-            ->method('encode')
-            ->with($envelope)
-            ->willReturn($envelopeArray)
-        ;
-
-        $this->gpsConfigurationMock
-            ->method('shouldUseMessengerRetry')
-            ->willReturn(true)
-        ;
-
-        $this->gpsConfigurationMock
-            ->expects(static::once())
-            ->method('getTopicName')
-            ->willReturn(self::TOPIC_NAME)
-        ;
-
-        $this->pubSubClientMock
-            ->expects(static::once())
-            ->method('topic')
-            ->with(self::TOPIC_NAME)
-            ->willReturn($this->topicMock);
-
-        $this->topicMock
-            ->expects(static::once())
-            ->method('publish');
-
-        self::assertSame($envelope, $this->gpsSender->send($envelope));
+        self::assertSame($envelope, $this->gpsBatchSender->send($envelope));
     }
 
     public function testItPublishesWithOrderingKey(): void
@@ -151,53 +117,25 @@ class GpsSenderTest extends TestCase
             ->willReturn(self::TOPIC_NAME)
         ;
 
-        $this->topicMock
-            ->expects(static::once())
-            ->method('publish')
-            ->with(new Message(['data' => json_encode($envelopeArray), 'orderingKey' => self::ORDERED_KEY]))
-        ;
-
         $this->pubSubClientMock
             ->expects(static::once())
             ->method('topic')
             ->with(self::TOPIC_NAME)
             ->willReturn($this->topicMock);
 
-        self::assertSame($envelope, $this->gpsSender->send($envelope));
-    }
-
-    public function testItPublishesWithoutOrderingKey(): void
-    {
-        $envelope = EnvelopeFactory::create();
-        $envelopeArray = ['body' => []];
-
-        $this->serializerMock
-            ->expects(static::once())
-            ->method('encode')
-            ->with($envelope)
-            ->willReturn($envelopeArray)
-        ;
-
-        $this->gpsConfigurationMock
-            ->expects(static::once())
-            ->method('getTopicName')
-            ->willReturn(self::TOPIC_NAME)
-        ;
-
         $this->topicMock
             ->expects(static::once())
-            ->method('publish')
-            ->with(new Message(['data' => json_encode($envelopeArray), 'orderingKey' => null]))
+            ->method('batchPublisher')
+            ->willReturn($this->batchPublisherMock)
         ;
 
-        $this->pubSubClientMock
+        $this->batchPublisherMock
             ->expects(static::once())
-            ->method('topic')
-            ->with(self::TOPIC_NAME)
-            ->willReturn($this->topicMock)
+            ->method('publish')
+            ->with(new Message(['data' => json_encode($envelopeArray), 'orderingKey' => self::ORDERED_KEY]))
         ;
 
-        self::assertSame($envelope, $this->gpsSender->send($envelope));
+        self::assertSame($envelope, $this->gpsBatchSender->send($envelope));
     }
 
     public function testItPublishesWithAttributes(): void
@@ -219,7 +157,19 @@ class GpsSenderTest extends TestCase
             ->willReturn(self::TOPIC_NAME)
         ;
 
+        $this->pubSubClientMock
+            ->expects(static::once())
+            ->method('topic')
+            ->with(self::TOPIC_NAME)
+            ->willReturn($this->topicMock);
+
         $this->topicMock
+            ->expects(static::once())
+            ->method('batchPublisher')
+            ->willReturn($this->batchPublisherMock)
+        ;
+
+        $this->batchPublisherMock
             ->expects(static::once())
             ->method('publish')
             ->with(new Message([
@@ -228,20 +178,23 @@ class GpsSenderTest extends TestCase
             ]))
         ;
 
-        $this->pubSubClientMock
-            ->expects(static::once())
-            ->method('topic')
-            ->with(self::TOPIC_NAME)
-            ->willReturn($this->topicMock);
-
-        self::assertSame($envelope, $this->gpsSender->send($envelope));
+        self::assertSame($envelope, $this->gpsBatchSender->send($envelope));
     }
 
-    public function testItPublishesWithGpsSenderOptionsStamp(): void
+    public function testItUsesCustomBatchOptions(): void
     {
-        $options = ['foo' => 'bar'];
-        $envelope = EnvelopeFactory::create(new GpsSenderOptionsStamp($options));
+        $envelope = EnvelopeFactory::create();
         $envelopeArray = ['body' => []];
+
+        $this->gpsConfigurationMock = $this->createMock(GpsConfigurationInterface::class);
+        $this->gpsConfigurationMock
+            ->method('shouldCompressMessageBody')
+            ->willReturn(false)
+        ;
+        $this->gpsConfigurationMock
+            ->method('getBatchSenderOptions')
+            ->willReturn(['enabled' => true, 'batchSize' => 50, 'callPeriod' => 0.5])
+        ;
 
         $this->serializerMock
             ->expects(static::once())
@@ -256,22 +209,31 @@ class GpsSenderTest extends TestCase
             ->willReturn(self::TOPIC_NAME)
         ;
 
-        $this->topicMock
-            ->expects(static::once())
-            ->method('publish')
-            ->with(new Message([
-                'data' => json_encode($envelopeArray),
-                'attributes' => [],
-            ]), $options)
-        ;
-
         $this->pubSubClientMock
             ->expects(static::once())
             ->method('topic')
             ->with(self::TOPIC_NAME)
             ->willReturn($this->topicMock);
 
-        self::assertSame($envelope, $this->gpsSender->send($envelope));
+        $this->topicMock
+            ->expects(static::once())
+            ->method('batchPublisher')
+            ->with(['batchSize' => 50, 'callPeriod' => 0.5])
+            ->willReturn($this->batchPublisherMock)
+        ;
+
+        $this->batchPublisherMock
+            ->expects(static::once())
+            ->method('publish')
+        ;
+
+        $gpsBatchSender = new GpsBatchSender(
+            $this->pubSubClientMock,
+            $this->gpsConfigurationMock,
+            $this->serializerMock,
+        );
+
+        self::assertSame($envelope, $gpsBatchSender->send($envelope));
     }
 
     public function testItCompressesMessageBodyWhenEnabled(): void
@@ -291,6 +253,10 @@ class GpsSenderTest extends TestCase
             ->method('shouldCompressMessageBody')
             ->willReturn(true)
         ;
+        $this->gpsConfigurationMock
+            ->method('getBatchSenderOptions')
+            ->willReturn(['enabled' => true])
+        ;
 
         $this->gpsConfigurationMock
             ->expects(static::once())
@@ -300,7 +266,19 @@ class GpsSenderTest extends TestCase
 
         $expectedData = gzencode((string) json_encode($envelopeArray));
 
+        $this->pubSubClientMock
+            ->expects(static::once())
+            ->method('topic')
+            ->with(self::TOPIC_NAME)
+            ->willReturn($this->topicMock);
+
         $this->topicMock
+            ->expects(static::once())
+            ->method('batchPublisher')
+            ->willReturn($this->batchPublisherMock)
+        ;
+
+        $this->batchPublisherMock
             ->expects(static::once())
             ->method('publish')
             ->with(new Message([
@@ -309,19 +287,13 @@ class GpsSenderTest extends TestCase
             ]))
         ;
 
-        $this->pubSubClientMock
-            ->expects(static::once())
-            ->method('topic')
-            ->with(self::TOPIC_NAME)
-            ->willReturn($this->topicMock);
-
-        $gpsSender = new GpsSender(
+        $gpsBatchSender = new GpsBatchSender(
             $this->pubSubClientMock,
             $this->gpsConfigurationMock,
             $this->serializerMock,
         );
 
-        self::assertSame($envelope, $gpsSender->send($envelope));
+        self::assertSame($envelope, $gpsBatchSender->send($envelope));
     }
 
     public function testItPublishesHeadersAsAttributesWhenEnabled(): void
@@ -342,6 +314,10 @@ class GpsSenderTest extends TestCase
             ->willReturn(false)
         ;
         $this->gpsConfigurationMock
+            ->method('getBatchSenderOptions')
+            ->willReturn(['enabled' => true])
+        ;
+        $this->gpsConfigurationMock
             ->method('shouldUseHeadersAsAttributes')
             ->willReturn(true)
         ;
@@ -352,7 +328,19 @@ class GpsSenderTest extends TestCase
             ->willReturn(self::TOPIC_NAME)
         ;
 
+        $this->pubSubClientMock
+            ->expects(static::once())
+            ->method('topic')
+            ->with(self::TOPIC_NAME)
+            ->willReturn($this->topicMock);
+
         $this->topicMock
+            ->expects(static::once())
+            ->method('batchPublisher')
+            ->willReturn($this->batchPublisherMock)
+        ;
+
+        $this->batchPublisherMock
             ->expects(static::once())
             ->method('publish')
             ->with(new Message([
@@ -361,18 +349,12 @@ class GpsSenderTest extends TestCase
             ]))
         ;
 
-        $this->pubSubClientMock
-            ->expects(static::once())
-            ->method('topic')
-            ->with(self::TOPIC_NAME)
-            ->willReturn($this->topicMock);
-
-        $gpsSender = new GpsSender(
+        $gpsBatchSender = new GpsBatchSender(
             $this->pubSubClientMock,
             $this->gpsConfigurationMock,
             $this->serializerMock,
         );
 
-        self::assertSame($envelope, $gpsSender->send($envelope));
+        self::assertSame($envelope, $gpsBatchSender->send($envelope));
     }
 }

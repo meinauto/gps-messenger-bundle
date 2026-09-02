@@ -13,6 +13,7 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
 final class GpsConfigurationResolver implements GpsConfigurationResolverInterface
 {
     private const INT_NORMALIZER_KEY = 'int';
+    private const FLOAT_NORMALIZER_KEY = 'float';
     private const BOOL_NORMALIZER_KEY = 'bool';
     private const NORMALIZABLE_SUBSCRIPTION_OPTIONS = [
         self::INT_NORMALIZER_KEY => ['ackDeadlineSeconds', 'maxDeliveryAttempts'],
@@ -21,6 +22,11 @@ final class GpsConfigurationResolver implements GpsConfigurationResolverInterfac
     private const NORMALIZABLE_SUBSCRIPTION_PULL_OPTIONS = [
         self::INT_NORMALIZER_KEY => ['maxMessages', 'timeoutMillis'],
         self::BOOL_NORMALIZER_KEY => ['returnImmediately'],
+    ];
+    private const NORMALIZABLE_BATCH_SENDER_OPTIONS = [
+        self::INT_NORMALIZER_KEY => ['batchSize'],
+        self::FLOAT_NORMALIZER_KEY => ['callPeriod'],
+        self::BOOL_NORMALIZER_KEY => ['enabled'],
     ];
 
     /**
@@ -45,12 +51,26 @@ final class GpsConfigurationResolver implements GpsConfigurationResolverInterfac
             );
         };
 
+        $batchSenderOptionsNormalizer = static function (Options $options, $data) {
+            return self::normalizeOptions(
+                $data ?? [],
+                self::NORMALIZABLE_BATCH_SENDER_OPTIONS
+            );
+        };
+
         $mergedOptions = $this->getMergedOptions($dsn, $options);
 
         $optionsResolver = new OptionsResolver();
         $optionsResolver
             ->setDefault('use_messenger_retry', false)
             ->setAllowedTypes('use_messenger_retry', 'bool')
+            ->setDefault('compress_message_body', false)
+            ->setAllowedTypes('compress_message_body', 'bool')
+            ->setDefault('headers_as_attributes', false)
+            ->setAllowedTypes('headers_as_attributes', 'bool')
+            ->setDefault('batchSender', ['enabled' => false])
+            ->setAllowedTypes('batchSender', 'array')
+            ->setNormalizer('batchSender', $batchSenderOptionsNormalizer)
             ->setDefault('client_config', [])
             ->setOptions('topic', function (OptionsResolver $topicResolver): void {
                 $topicResolver
@@ -99,10 +119,13 @@ final class GpsConfigurationResolver implements GpsConfigurationResolverInterfac
             $resolvedOptions['subscription']['name'],
             $resolvedOptions['subscription']['createIfNotExist'],
             $resolvedOptions['use_messenger_retry'],
+            $resolvedOptions['compress_message_body'],
             $resolvedOptions['client_config'],
             $resolvedOptions['topic']['options'],
             $resolvedOptions['subscription']['options'],
-            $resolvedOptions['subscription']['pull']
+            $resolvedOptions['subscription']['pull'],
+            $resolvedOptions['batchSender'],
+            $resolvedOptions['headers_as_attributes']
         );
     }
 
@@ -124,6 +147,9 @@ final class GpsConfigurationResolver implements GpsConfigurationResolverInterfac
             switch (true) {
                 case \in_array($optionName, $normalizationRules[self::INT_NORMALIZER_KEY], true):
                     $optionValue = (int) filter_var($optionValue, FILTER_SANITIZE_NUMBER_INT);
+                    break;
+                case \in_array($optionName, $normalizationRules[self::FLOAT_NORMALIZER_KEY] ?? [], true):
+                    $optionValue = (float) filter_var($optionValue, FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
                     break;
                 case \in_array($optionName, $normalizationRules[self::BOOL_NORMALIZER_KEY], true):
                     $optionValue = filter_var($optionValue, FILTER_VALIDATE_BOOLEAN);
@@ -159,6 +185,10 @@ final class GpsConfigurationResolver implements GpsConfigurationResolverInterfac
 
         if (isset($dnsOptions['use_messenger_retry']) && is_string($dnsOptions['use_messenger_retry'])) {
             $dnsOptions['use_messenger_retry'] = $this->toBool($dnsOptions['use_messenger_retry'], false);
+        }
+
+        if (isset($dnsOptions['headers_as_attributes']) && is_string($dnsOptions['headers_as_attributes'])) {
+            $dnsOptions['headers_as_attributes'] = $this->toBool($dnsOptions['headers_as_attributes'], false);
         }
 
         if (isset($dnsOptions['topic']['createIfNotExist']) && is_string($dnsOptions['topic']['createIfNotExist'])) {

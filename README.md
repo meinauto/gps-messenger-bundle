@@ -17,6 +17,76 @@ and [some bridge](https://github.com/sroze/messenger-enqueue-transport#readme).
 - **Message ordering support** using the `OrderingKeyStamp`.
 - **Keep-alive support** for long-running Messenger workers.
 
+## Meinauto custom features
+
+This fork adds the following features on top of upstream:
+
+- **Poison-message handling**: if a received message fails to decode (invalid JSON, or missing
+  required Messenger headers such as `type`), it is logged as a `warning` and acknowledged
+  (removed from the subscription) instead of endlessly blocking/retrying the worker.
+- **Message body compression**: optionally gzip-compress the message body before publishing,
+  and transparently decompress it on receive.
+- **Headers as attributes**: optionally map Symfony Messenger headers to native Pub/Sub message
+  attributes instead of embedding them in the JSON body, and read them back the same way.
+- **Batch sender**: optionally publish messages using Pub/Sub's `BatchPublisher` (batching
+  multiple messages together) instead of publishing them one by one, with configurable batch
+  size and call period.
+
+### Message body compression
+
+```yaml
+# config/packages/messenger.yaml
+
+framework:
+    messenger:
+        transports:
+            gps_transport:
+                dsn: 'gps://default'
+                options:
+                    compress_message_body: true # optional (default: false), requires the "zlib" PHP extension at runtime
+```
+
+or via DSN: `gps://default?compress_message_body=true`.
+
+### Headers as attributes
+
+```yaml
+# config/packages/messenger.yaml
+
+framework:
+    messenger:
+        transports:
+            gps_transport:
+                dsn: 'gps://default'
+                options:
+                    headers_as_attributes: true # optional (default: false)
+```
+
+or via DSN: `gps://default?headers_as_attributes=true`.
+
+When enabled, the Messenger envelope headers (e.g. `type`) are sent as native Pub/Sub message
+attributes and the message body only contains the serialized payload, instead of a JSON
+structure combining `body` and `headers`.
+
+### Batch sender
+
+```yaml
+# config/packages/messenger.yaml
+
+framework:
+    messenger:
+        transports:
+            gps_transport:
+                dsn: 'gps://default'
+                options:
+                    batchSender:
+                        enabled: true # optional (default: false)
+                        batchSize: 100 # optional (default: 100), max messages for each batch
+                        callPeriod: 0.1 # optional (default: 0.1), max time in seconds between each batch publish
+```
+
+or via DSN: `gps://default?batchSender[enabled]=true&batchSender[batchSize]=50&batchSender[callPeriod]=0.5`.
+
 ## Support
 
 | Version                                                               | Status             | Symfony Versions |
