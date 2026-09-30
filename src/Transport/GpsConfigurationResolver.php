@@ -187,6 +187,10 @@ final class GpsConfigurationResolver implements GpsConfigurationResolverInterfac
             $dnsOptions['use_messenger_retry'] = $this->toBool($dnsOptions['use_messenger_retry'], false);
         }
 
+        if (isset($dnsOptions['compress_message_body']) && is_string($dnsOptions['compress_message_body'])) {
+            $dnsOptions['compress_message_body'] = $this->toBool($dnsOptions['compress_message_body'], false);
+        }
+
         if (isset($dnsOptions['headers_as_attributes']) && is_string($dnsOptions['headers_as_attributes'])) {
             $dnsOptions['headers_as_attributes'] = $this->toBool($dnsOptions['headers_as_attributes'], false);
         }

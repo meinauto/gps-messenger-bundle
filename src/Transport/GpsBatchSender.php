@@ -8,6 +8,7 @@ use Google\Cloud\PubSub\BatchPublisher;
 use Google\Cloud\PubSub\MessageBuilder;
 use Google\Cloud\PubSub\PubSubClient;
 use PetitPress\GpsMessengerBundle\Transport\Stamp\AttributesStamp;
+use PetitPress\GpsMessengerBundle\Transport\Stamp\GpsSenderOptionsStamp;
 use PetitPress\GpsMessengerBundle\Transport\Stamp\OrderingKeyStamp;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Exception\TransportException;
@@ -49,6 +50,12 @@ final class GpsBatchSender implements SenderInterface
      */
     public function send(Envelope $envelope): Envelope
     {
+        $senderOptionsStamp = $envelope->last(GpsSenderOptionsStamp::class);
+        if ($senderOptionsStamp instanceof GpsSenderOptionsStamp && $senderOptionsStamp->getOptions() !== []) {
+            // BatchPublisher cannot apply publish options to individual messages.
+            return (new GpsSender($this->pubSubClient, $this->gpsConfiguration, $this->serializer))->send($envelope);
+        }
+
         $encodedMessage = $this->serializer->encode($envelope);
 
         $messageBuilder = new MessageBuilder();
@@ -116,7 +123,7 @@ final class GpsBatchSender implements SenderInterface
         if (null === $this->batchPublisher) {
             $this->batchPublisher = $this->pubSubClient
                 ->topic($this->gpsConfiguration->getTopicName())
-                ->batchPublisher($this->batchOptions);
+                ->batchPublisher(['batchOptions' => $this->batchOptions]);
         }
 
         return $this->batchPublisher;

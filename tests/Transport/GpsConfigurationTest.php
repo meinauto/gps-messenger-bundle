@@ -43,6 +43,32 @@ final class GpsConfigurationTest extends TestCase
     }
 
     /**
+     * @param array<string, mixed> $options
+     */
+    #[DataProvider('compressionDsnOptions')]
+    public function testCompressionDsnNormalization(string $dsn, array $options, bool $expected): void
+    {
+        $configuration = $this->gpsConfigurationResolver->resolve($dsn, $options);
+        static::assertSame($expected, $configuration->shouldCompressMessageBody());
+    }
+
+    /**
+     * @return array<string, array{string, array<string, mixed>, bool}>
+     */
+    public static function compressionDsnOptions(): array
+    {
+        return [
+            'true' => ['gps://default?compress_message_body=true', [], true],
+            'false' => ['gps://default?compress_message_body=false', [], false],
+            'one' => ['gps://default?compress_message_body=1', [], true],
+            'zero' => ['gps://default?compress_message_body=0', [], false],
+            'invalid uses default' => ['gps://default?compress_message_body=invalid', [], false],
+            'options override true DSN' => ['gps://default?compress_message_body=true', ['compress_message_body' => false], false],
+            'options override false DSN' => ['gps://default?compress_message_body=false', ['compress_message_body' => true], true],
+        ];
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public static function dataProvider(): array

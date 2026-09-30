@@ -87,6 +87,11 @@ framework:
 
 or via DSN: `gps://default?batchSender[enabled]=true&batchSender[batchSize]=50&batchSender[callPeriod]=0.5`.
 
+Messages with a non-empty `GpsSenderOptionsStamp` are published individually through the
+regular sender so their publish options are honored. Messages without publish options
+continue to use the batch publisher.
+Individually published messages may arrive before messages still waiting in a batch.
+
 ## Support
 
 | Version                                                               | Status             | Symfony Versions |
