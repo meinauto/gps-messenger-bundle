@@ -9,6 +9,7 @@ use Google\Cloud\PubSub\PubSubClient;
 use JsonException;
 use LogicException;
 use PetitPress\GpsMessengerBundle\Transport\Stamp\GpsReceivedStamp;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Exception\MessageDecodingFailedException;
 use Symfony\Component\Messenger\Exception\TransportException;
@@ -26,7 +27,8 @@ final class GpsReceiver implements KeepaliveReceiverInterface
     public function __construct(
         private PubSubClient $pubSubClient,
         private GpsConfigurationInterface $gpsConfiguration,
-        private SerializerInterface $serializer
+        private SerializerInterface $serializer,
+        private LoggerInterface $logger
     ) {
     }
 
@@ -43,7 +45,16 @@ final class GpsReceiver implements KeepaliveReceiverInterface
                 ->pull($this->gpsConfiguration->getSubscriptionPullOptions());
 
             foreach ($messages as $message) {
-                yield $this->createEnvelopeFromPubSubMessage($message);
+                try {
+                    yield $this->createEnvelopeFromPubSubMessage($message);
+                } catch (MessageDecodingFailedException $exception) {
+                    $this->logger->warning($exception->getMessage(), ['exception' => $exception]);
+
+                    $this->pubSubClient
+                        ->subscription($this->gpsConfiguration->getSubscriptionName())
+                        ->acknowledge($message)
+                    ;
+                }
             }
         } catch (Throwable $exception) {
             throw new TransportException($exception->getMessage(), 0, $exception);
@@ -108,15 +119,48 @@ final class GpsReceiver implements KeepaliveReceiverInterface
      */
     private function createEnvelopeFromPubSubMessage(Message $message): Envelope
     {
-        try {
-            /** @var array<string, mixed> $rawData */
-            $rawData = json_decode($message->data(), true, 512, JSON_THROW_ON_ERROR);
-        } catch (JsonException $exception) {
-            throw new MessageDecodingFailedException($exception->getMessage(), 0, $exception);
+        $data = $message->data();
+
+        $attributes = $message->attributes();
+        if (($attributes['compressed-message-body'] ?? null) === 'true') {
+            if (! \function_exists('gzdecode')) {
+                throw new MessageDecodingFailedException('Message body decompression requires the "zlib" PHP extension.');
+            }
+
+            $decompressedData = @gzdecode($data);
+            if (false === $decompressedData) {
+                throw new MessageDecodingFailedException('Failed to decompress message body.');
+            }
+
+            $data = $decompressedData;
+        }
+
+        if ($this->gpsConfiguration->shouldUseHeadersAsAttributes()) {
+            $headers = $attributes;
+            unset($headers['compressed-message-body']);
+
+            $rawData = ['body' => $data, 'headers' => $headers];
+        } else {
+            try {
+                /** @var array<string, mixed> $rawData */
+                $rawData = json_decode($data, true, 512, JSON_THROW_ON_ERROR);
+            } catch (JsonException $exception) {
+                throw new MessageDecodingFailedException($exception->getMessage(), 0, $exception);
+            }
         }
 
         /** @var array{body: string, headers?: array<string, string>} $rawData */
-        return $this->serializer->decode($rawData)->with(new GpsReceivedStamp($message));
+        $envelope = $this->serializer->decode($rawData);
+
+        // Symfony's serializer may return an Envelope wrapping a MessageDecodingFailedException
+        // instead of throwing it (e.g. when headers/type are missing), so it needs to be re-thrown
+        // here to be handled as a poison message by the caller.
+        $decodedMessage = $envelope->getMessage();
+        if ($decodedMessage instanceof MessageDecodingFailedException) {
+            throw $decodedMessage;
+        }
+
+        return $envelope->with(new GpsReceivedStamp($message));
     }
 
     public function keepalive(Envelope $envelope, ?int $seconds = null): void

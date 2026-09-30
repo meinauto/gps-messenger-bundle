@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PetitPress\GpsMessengerBundle\Transport;
 
+use Google\Cloud\PubSub\BatchPublisher;
 use Google\Cloud\PubSub\MessageBuilder;
 use Google\Cloud\PubSub\PubSubClient;
 use PetitPress\GpsMessengerBundle\Transport\Stamp\AttributesStamp;
@@ -15,14 +16,20 @@ use Symfony\Component\Messenger\Stamp\RedeliveryStamp;
 use Symfony\Component\Messenger\Transport\Sender\SenderInterface;
 use Symfony\Component\Messenger\Transport\Serialization\SerializerInterface;
 
-/**
- * @author Ronald Marfoldi <ronald.marfoldi@petitpress.sk>
- */
-final class GpsSender implements SenderInterface
+final class GpsBatchSender implements SenderInterface
 {
     private PubSubClient $pubSubClient;
     private GpsConfigurationInterface $gpsConfiguration;
     private SerializerInterface $serializer;
+    private ?BatchPublisher $batchPublisher = null;
+
+    /**
+     * @var array<string, mixed>
+     */
+    private array $batchOptions = [
+        'batchSize' => 100,  // Max messages for each batch.
+        'callPeriod' => 0.1, // Max time in seconds between each batch publish.
+    ];
 
     public function __construct(
         PubSubClient $pubSubClient,
@@ -32,6 +39,10 @@ final class GpsSender implements SenderInterface
         $this->pubSubClient = $pubSubClient;
         $this->gpsConfiguration = $gpsConfiguration;
         $this->serializer = $serializer;
+
+        $batchSenderOptions = $this->gpsConfiguration->getBatchSenderOptions();
+        $this->batchOptions['batchSize'] = $batchSenderOptions['batchSize'] ?? $this->batchOptions['batchSize'];
+        $this->batchOptions['callPeriod'] = $batchSenderOptions['callPeriod'] ?? $this->batchOptions['callPeriod'];
     }
 
     /**
@@ -39,6 +50,12 @@ final class GpsSender implements SenderInterface
      */
     public function send(Envelope $envelope): Envelope
     {
+        $senderOptionsStamp = $envelope->last(GpsSenderOptionsStamp::class);
+        if ($senderOptionsStamp instanceof GpsSenderOptionsStamp && $senderOptionsStamp->getOptions() !== []) {
+            // BatchPublisher cannot apply publish options to individual messages.
+            return (new GpsSender($this->pubSubClient, $this->gpsConfiguration, $this->serializer))->send($envelope);
+        }
+
         $encodedMessage = $this->serializer->encode($envelope);
 
         $messageBuilder = new MessageBuilder();
@@ -96,16 +113,19 @@ final class GpsSender implements SenderInterface
             $messageBuilder = $messageBuilder->setAttributes($attributesStamp->getAttributes());
         }
 
-        $senderOptionsStamp = $envelope->last(GpsSenderOptionsStamp::class);
-        $options = [];
-        if ($senderOptionsStamp instanceof GpsSenderOptionsStamp) {
-            $options = $senderOptionsStamp->getOptions();
-        }
-        $this->pubSubClient
-            ->topic($this->gpsConfiguration->getTopicName())
-            ->publish($messageBuilder->build(), $options)
-        ;
+        $this->getBatchPublisher()->publish($messageBuilder->build());
 
         return $envelope;
+    }
+
+    private function getBatchPublisher(): BatchPublisher
+    {
+        if (null === $this->batchPublisher) {
+            $this->batchPublisher = $this->pubSubClient
+                ->topic($this->gpsConfiguration->getTopicName())
+                ->batchPublisher(['batchOptions' => $this->batchOptions]);
+        }
+
+        return $this->batchPublisher;
     }
 }

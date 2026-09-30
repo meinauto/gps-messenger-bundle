@@ -23,6 +23,15 @@ interface GpsConfigurationInterface
 
     public function shouldUseMessengerRetry(): bool;
 
+    public function shouldCompressMessageBody(): bool;
+
+    /**
+     * Whether the Symfony Messenger headers (envelope "headers", e.g. "type" and
+     * "X-Message-Stamp-*") should be sent as Google Pub/Sub message attributes
+     * instead of being embedded into the JSON-encoded message body.
+     */
+    public function shouldUseHeadersAsAttributes(): bool;
+
     /**
      * @see PubSubClient constructor options
      * @return array<string, mixed>
@@ -46,4 +55,12 @@ interface GpsConfigurationInterface
      * @return array<string, mixed>
      */
     public function getSubscriptionPullOptions(): array;
+
+    /**
+     * @see Topic::batchPublisher options
+     * @return array<string, mixed>
+     */
+    public function getBatchSenderOptions(): array;
+
+    public function isBatchSenderEnabled(): bool;
 }

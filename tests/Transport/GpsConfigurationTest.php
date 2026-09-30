@@ -37,6 +37,35 @@ final class GpsConfigurationTest extends TestCase
         static::assertSame($expectedConfiguration->getSubscriptionName(), $configuration->getSubscriptionName());
         static::assertSame($expectedConfiguration->getTopicName(), $configuration->getTopicName());
         static::assertSame($expectedConfiguration->getTopicOptions(), $configuration->getTopicOptions());
+        static::assertSame($expectedConfiguration->getBatchSenderOptions(), $configuration->getBatchSenderOptions());
+        static::assertSame($expectedConfiguration->isBatchSenderEnabled(), $configuration->isBatchSenderEnabled());
+        static::assertSame($expectedConfiguration->shouldUseHeadersAsAttributes(), $configuration->shouldUseHeadersAsAttributes());
+    }
+
+    /**
+     * @param array<string, mixed> $options
+     */
+    #[DataProvider('compressionDsnOptions')]
+    public function testCompressionDsnNormalization(string $dsn, array $options, bool $expected): void
+    {
+        $configuration = $this->gpsConfigurationResolver->resolve($dsn, $options);
+        static::assertSame($expected, $configuration->shouldCompressMessageBody());
+    }
+
+    /**
+     * @return array<string, array{string, array<string, mixed>, bool}>
+     */
+    public static function compressionDsnOptions(): array
+    {
+        return [
+            'true' => ['gps://default?compress_message_body=true', [], true],
+            'false' => ['gps://default?compress_message_body=false', [], false],
+            'one' => ['gps://default?compress_message_body=1', [], true],
+            'zero' => ['gps://default?compress_message_body=0', [], false],
+            'invalid uses default' => ['gps://default?compress_message_body=invalid', [], false],
+            'options override true DSN' => ['gps://default?compress_message_body=true', ['compress_message_body' => false], false],
+            'options override false DSN' => ['gps://default?compress_message_body=false', ['compress_message_body' => true], true],
+        ];
     }
 
     /**
@@ -54,6 +83,7 @@ final class GpsConfigurationTest extends TestCase
                     GpsConfigurationResolverInterface::DEFAULT_TOPIC_NAME,
                     true,
                     false,
+                    false,
                     [],
                     [],
                     [],
@@ -69,6 +99,7 @@ final class GpsConfigurationTest extends TestCase
                     'something',
                     true,
                     false,
+                    false,
                     [],
                     [],
                     [],
@@ -83,6 +114,7 @@ final class GpsConfigurationTest extends TestCase
                     true,
                     'subscription_name',
                     true,
+                    false,
                     false,
                     ['apiEndpoint' => 'https://europe-west3-pubsub.googleapis.com'],
                     ['labels' => ['label_topic1']],
@@ -109,6 +141,7 @@ final class GpsConfigurationTest extends TestCase
                     'something',
                     true,
                     false,
+                    false,
                     [],
                     [],
                     [],
@@ -126,6 +159,7 @@ final class GpsConfigurationTest extends TestCase
                     true,
                     'subscription_name',
                     true,
+                    false,
                     false,
                     [],
                     [],
@@ -168,6 +202,7 @@ final class GpsConfigurationTest extends TestCase
                     'subscription_name',
                     true,
                     false,
+                    false,
                     ['apiEndpoint' => 'https://europe-west3-pubsub.googleapis.com'],
                     ['labels' => ['label_topic1']],
                     [
@@ -190,6 +225,7 @@ final class GpsConfigurationTest extends TestCase
                     true,
                     GpsConfigurationResolverInterface::DEFAULT_TOPIC_NAME,
                     true,
+                    false,
                     false,
                     [],
                     [],
@@ -214,6 +250,7 @@ final class GpsConfigurationTest extends TestCase
                     GpsConfigurationResolverInterface::DEFAULT_TOPIC_NAME,
                     true,
                     false,
+                    false,
                     [],
                     [],
                     [],
@@ -237,6 +274,7 @@ final class GpsConfigurationTest extends TestCase
                     GpsConfigurationResolverInterface::DEFAULT_TOPIC_NAME,
                     true,
                     false,
+                    false,
                     [],
                     [],
                     [],
@@ -259,6 +297,7 @@ final class GpsConfigurationTest extends TestCase
                     GpsConfigurationResolverInterface::DEFAULT_TOPIC_NAME,
                     true,
                     false,
+                    false,
                     [],
                     [],
                     [],
@@ -276,6 +315,7 @@ final class GpsConfigurationTest extends TestCase
                     GpsConfigurationResolverInterface::DEFAULT_TOPIC_NAME,
                     true,
                     GpsConfigurationResolverInterface::DEFAULT_TOPIC_NAME,
+                    false,
                     false,
                     false,
                     [],
@@ -297,6 +337,7 @@ final class GpsConfigurationTest extends TestCase
                     GpsConfigurationResolverInterface::DEFAULT_TOPIC_NAME,
                     true,
                     false,
+                    false,
                     [],
                     [],
                     [],
@@ -310,6 +351,7 @@ final class GpsConfigurationTest extends TestCase
                     'foo',
                     true,
                     'bar',
+                    false,
                     false,
                     false,
                     [],
@@ -327,6 +369,7 @@ final class GpsConfigurationTest extends TestCase
                     'bar',
                     false,
                     false,
+                    false,
                     [],
                     [],
                     [],
@@ -341,6 +384,7 @@ final class GpsConfigurationTest extends TestCase
                     false,
                     'bar',
                     true,
+                    false,
                     false,
                     [],
                     [],
@@ -357,6 +401,7 @@ final class GpsConfigurationTest extends TestCase
                     'bar',
                     true,
                     false,
+                    false,
                     [],
                     [],
                     [],
@@ -371,6 +416,7 @@ final class GpsConfigurationTest extends TestCase
                     true,
                     'bar',
                     true,
+                    false,
                     false,
                     [],
                     [],
@@ -389,6 +435,7 @@ final class GpsConfigurationTest extends TestCase
                     GpsConfigurationResolverInterface::DEFAULT_TOPIC_NAME,
                     true,
                     true,
+                    false,
                     [],
                     [],
                     [],
@@ -406,6 +453,7 @@ final class GpsConfigurationTest extends TestCase
                     GpsConfigurationResolverInterface::DEFAULT_TOPIC_NAME,
                     true,
                     false,
+                    false,
                     [],
                     [],
                     [],
@@ -421,6 +469,7 @@ final class GpsConfigurationTest extends TestCase
                     'bar',
                     true,
                     true,
+                    false,
                     [],
                     [],
                     [],
@@ -435,6 +484,7 @@ final class GpsConfigurationTest extends TestCase
                     true,
                     'bar',
                     true,
+                    false,
                     false,
                     [],
                     [],
@@ -451,10 +501,107 @@ final class GpsConfigurationTest extends TestCase
                     'bar',
                     true,
                     false,
+                    false,
                     [],
                     [],
                     [],
                     ['maxMessages' => 10]
+                ),
+            ],
+            'compress_message_body is set to true' => [
+                'dsn' => 'gps://default',
+                'options' => [
+                    'compress_message_body' => true,
+                ],
+                'expectedConfiguration' => new GpsConfiguration(
+                    GpsConfigurationResolverInterface::DEFAULT_TOPIC_NAME,
+                    true,
+                    GpsConfigurationResolverInterface::DEFAULT_TOPIC_NAME,
+                    true,
+                    false,
+                    true,
+                    [],
+                    [],
+                    [],
+                    ['maxMessages' => 10]
+                ),
+            ],
+            'batchSender is enabled with custom options' => [
+                'dsn' => 'gps://default',
+                'options' => [
+                    'batchSender' => [
+                        'enabled' => true,
+                        'batchSize' => 50,
+                        'callPeriod' => 0.5,
+                    ],
+                ],
+                'expectedConfiguration' => new GpsConfiguration(
+                    GpsConfigurationResolverInterface::DEFAULT_TOPIC_NAME,
+                    true,
+                    GpsConfigurationResolverInterface::DEFAULT_TOPIC_NAME,
+                    true,
+                    false,
+                    false,
+                    [],
+                    [],
+                    [],
+                    ['maxMessages' => 10],
+                    ['enabled' => true, 'batchSize' => 50, 'callPeriod' => 0.5]
+                ),
+            ],
+            'DSN: batchSender is enabled' => [
+                'dsn' => 'gps://default?topic[name]=foo&subscription[name]=bar&batchSender[enabled]=true&batchSender[batchSize]=25&batchSender[callPeriod]=0.2',
+                'options' => [],
+                'expectedConfiguration' => new GpsConfiguration(
+                    'foo',
+                    true,
+                    'bar',
+                    true,
+                    false,
+                    false,
+                    [],
+                    [],
+                    [],
+                    ['maxMessages' => 10],
+                    ['enabled' => true, 'batchSize' => 25, 'callPeriod' => 0.2]
+                ),
+            ],
+            'headers_as_attributes is set to true' => [
+                'dsn' => 'gps://default',
+                'options' => [
+                    'headers_as_attributes' => true,
+                ],
+                'expectedConfiguration' => new GpsConfiguration(
+                    GpsConfigurationResolverInterface::DEFAULT_TOPIC_NAME,
+                    true,
+                    GpsConfigurationResolverInterface::DEFAULT_TOPIC_NAME,
+                    true,
+                    false,
+                    false,
+                    [],
+                    [],
+                    [],
+                    ['maxMessages' => 10],
+                    ['enabled' => false],
+                    true
+                ),
+            ],
+            'DSN: headers_as_attributes contains true' => [
+                'dsn' => 'gps://default?topic[name]=foo&subscription[name]=bar&headers_as_attributes=true',
+                'options' => [],
+                'expectedConfiguration' => new GpsConfiguration(
+                    'foo',
+                    true,
+                    'bar',
+                    true,
+                    false,
+                    false,
+                    [],
+                    [],
+                    [],
+                    ['maxMessages' => 10],
+                    ['enabled' => false],
+                    true
                 ),
             ],
         ];
