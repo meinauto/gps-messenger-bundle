@@ -64,6 +64,8 @@ final class GpsConfigurationResolver implements GpsConfigurationResolverInterfac
         $optionsResolver
             ->setDefault('use_messenger_retry', false)
             ->setAllowedTypes('use_messenger_retry', 'bool')
+            ->setDefault('always_ack_on_reject', false)
+            ->setAllowedTypes('always_ack_on_reject', 'bool')
             ->setDefault('compress_message_body', false)
             ->setAllowedTypes('compress_message_body', 'bool')
             ->setDefault('headers_as_attributes', false)
@@ -125,7 +127,8 @@ final class GpsConfigurationResolver implements GpsConfigurationResolverInterfac
             $resolvedOptions['subscription']['options'],
             $resolvedOptions['subscription']['pull'],
             $resolvedOptions['batchSender'],
-            $resolvedOptions['headers_as_attributes']
+            $resolvedOptions['headers_as_attributes'],
+            $resolvedOptions['always_ack_on_reject']
         );
     }
 
@@ -185,6 +188,10 @@ final class GpsConfigurationResolver implements GpsConfigurationResolverInterfac
 
         if (isset($dnsOptions['use_messenger_retry']) && is_string($dnsOptions['use_messenger_retry'])) {
             $dnsOptions['use_messenger_retry'] = $this->toBool($dnsOptions['use_messenger_retry'], false);
+        }
+
+        if (isset($dnsOptions['always_ack_on_reject']) && is_string($dnsOptions['always_ack_on_reject'])) {
+            $dnsOptions['always_ack_on_reject'] = $this->toBool($dnsOptions['always_ack_on_reject'], false);
         }
 
         if (isset($dnsOptions['compress_message_body']) && is_string($dnsOptions['compress_message_body'])) {

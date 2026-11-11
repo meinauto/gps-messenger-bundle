@@ -69,6 +69,32 @@ final class GpsConfigurationTest extends TestCase
     }
 
     /**
+     * @param array<string, mixed> $options
+     */
+    #[DataProvider('ackOnRejectOptions')]
+    public function testResolveAckOnReject(string $dsn, array $options, bool $expected): void
+    {
+        $configuration = $this->gpsConfigurationResolver->resolve($dsn, $options);
+
+        static::assertSame($expected, $configuration->shouldAlwaysAckOnReject());
+    }
+
+    /**
+     * @return array<string, array{string, array<string, mixed>, bool}>
+     */
+    public static function ackOnRejectOptions(): array
+    {
+        return [
+            'default' => ['gps://default', [], false],
+            'transport option' => ['gps://default', ['always_ack_on_reject' => true], true],
+            'DSN true' => ['gps://default?always_ack_on_reject=true', [], true],
+            'DSN false' => ['gps://default?always_ack_on_reject=false', [], false],
+            'invalid DSN uses default' => ['gps://default?always_ack_on_reject=invalid', [], false],
+            'transport option overrides DSN' => ['gps://default?always_ack_on_reject=true', ['always_ack_on_reject' => false], false],
+        ];
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public static function dataProvider(): array

@@ -23,6 +23,8 @@ interface GpsConfigurationInterface
 
     public function shouldUseMessengerRetry(): bool;
 
+    public function shouldAlwaysAckOnReject(): bool;
+
     public function shouldCompressMessageBody(): bool;
 
     /**

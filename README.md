@@ -32,6 +32,15 @@ This fork adds the following features on top of upstream:
   multiple messages together) instead of publishing them one by one, with configurable batch
   size and call period.
 
+### Acknowledge rejected messages
+
+Set `always_ack_on_reject: true` under the transport's `options` or add
+`always_ack_on_reject=true` to the DSN query. It defaults to `false`.
+
+When enabled, the receiver acknowledges every rejected message. This ends Pub/Sub
+redelivery for that subscription. `use_messenger_retry` separately controls whether
+Messenger retries are published.
+
 ### Message body compression
 
 ```yaml

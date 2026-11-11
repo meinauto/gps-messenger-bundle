@@ -94,7 +94,9 @@ class GpsReceiverTest extends TestCase
         );
     }
 
-    public function testItRejects(): void
+    #[AllowMockObjectsWithoutExpectations]
+    #[DataProvider('rejectOptions')]
+    public function testItRejects(bool $useMessengerRetry, bool $alwaysAckOnReject, bool $acknowledged): void
     {
         $gpsMessage = new Message(['data' => '']);
 
@@ -104,8 +106,17 @@ class GpsReceiverTest extends TestCase
             ->willReturn(self::SUBSCRIPTION_NAME)
         ;
 
+        $this->gpsConfigurationMock->method('shouldUseMessengerRetry')->willReturn($useMessengerRetry);
+        $this->gpsConfigurationMock->method('shouldAlwaysAckOnReject')->willReturn($alwaysAckOnReject);
+
         $this->subscriptionMock
-            ->expects(static::once())
+            ->expects($acknowledged ? static::once() : static::never())
+            ->method('acknowledge')
+            ->with($gpsMessage)
+        ;
+
+        $this->subscriptionMock
+            ->expects($acknowledged ? static::never() : static::once())
             ->method('modifyAckDeadline')
             ->with($gpsMessage, 0)
         ;
@@ -122,6 +133,18 @@ class GpsReceiverTest extends TestCase
         );
     }
 
+    /**
+     * @return array<string, array{bool, bool, bool}>
+     */
+    public static function rejectOptions(): array
+    {
+        return [
+            'Pub/Sub redelivery' => [false, false, false],
+            'Messenger retry' => [true, false, true],
+            'always acknowledge' => [false, true, true],
+            'both options enabled' => [true, true, true],
+        ];
+    }
 
     #[DataProvider('keepAliveSeconds')]
     public function testItKeepalive(?int $actualSeconds, int $expectedSeconds): void

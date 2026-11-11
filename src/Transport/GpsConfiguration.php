@@ -14,6 +14,7 @@ final class GpsConfiguration implements GpsConfigurationInterface
     private string $subscriptionName;
     private bool   $subscriptionCreationEnabled;
     private bool   $useMessengerRetry;
+    private bool   $alwaysAckOnReject;
     private bool   $compressMessageBody;
     private bool   $headersAsAttributes;
 
@@ -61,13 +62,15 @@ final class GpsConfiguration implements GpsConfigurationInterface
         array $subscriptionOptions,
         array $subscriptionPullOptions,
         array $batchSenderOptions = ['enabled' => false],
-        bool $headersAsAttributes = false
+        bool $headersAsAttributes = false,
+        bool $alwaysAckOnReject = false
     ) {
         $this->topicName = $topicName;
         $this->topicCreationEnabled = $topicCreationEnabled;
         $this->subscriptionName = $subscriptionName;
         $this->subscriptionCreationEnabled = $subscriptionCreationEnabled;
         $this->useMessengerRetry = $useMessengerRetry;
+        $this->alwaysAckOnReject = $alwaysAckOnReject;
         $this->compressMessageBody = $compressMessageBody;
         $this->clientConfig = $clientConfig;
         $this->topicOptions = $topicOptions;
@@ -100,6 +103,11 @@ final class GpsConfiguration implements GpsConfigurationInterface
     public function shouldUseMessengerRetry(): bool
     {
         return $this->useMessengerRetry;
+    }
+
+    public function shouldAlwaysAckOnReject(): bool
+    {
+        return $this->alwaysAckOnReject;
     }
 
     public function shouldCompressMessageBody(): bool
